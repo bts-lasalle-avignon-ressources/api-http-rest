@@ -17,11 +17,12 @@
     - [CLI](#cli)
     - [Postman](#postman)
   - [Application serveur HTTP](#application-serveur-http)
+    - [Générateur](#générateur)
     - [ESP32](#esp32)
     - [Python](#python)
     - [Node.js](#nodejs)
   - [Application cliente HTTP](#application-cliente-http)
-    - [Générateur](#générateur)
+    - [Générateur](#générateur-1)
     - [Android Java](#android-java)
     - [Qt C++](#qt-c)
     - [Python](#python-1)
@@ -161,7 +162,7 @@ Les API REST basées sur HTTP sont définies par8 :
 
 - un **URI** de base, comme `http://api.example.com/collection/` ;
 - des **méthodes HTTP** standards (par exemple : `GET`, `POST`, `PUT`, `PATCH` et `DELETE`) ;
-- un **type de médias** pour les **données** permettant une transition d'état (par exemple : `application/vnd.collection+json` pour [API JSON](https://jsonapi.org/), etc.).
+- un **type de médias** pour les **données** permettant une transition d'état (par exemple : `application/json` ou `application/vnd.collection+json` pour [API JSON](https://jsonapi.org/), etc.).
 
 Le tableau suivant indique comment les méthodes HTTP sont généralement utilisées dans une API REST :
 
@@ -177,8 +178,235 @@ Le tableau suivant indique comment les méthodes HTTP sont généralement utilis
 
 [OpenAPI](https://swagger.io/specification/) est une norme de description des API HTTP conformes à l’architecture REST. 
 
-> La spécification OpenAPI actuelle découle d’un projet antérieur nommé [Swagger](https://swagger.io/) (cf. https://www.ionos.fr/digitalguide/sites-internet/developpement-web/quest-ce-que-openapi/).
+> La spécification OpenAPI v3 actuelle découle d’un projet antérieur nommé [Swagger](https://swagger.io/) jusqu'à la v2.
 
+Spécifications : https://swagger.io/specification/ et sa documentation : https://swagger.io/docs/specification/about/
+
+À partir d'une spécification d'API, il est possible :
+
+- d'obtenir une documentation : http://swagger.io/swagger-ui/, ...
+- de générer le code (client/serveur) : http://swagger.io/swagger-codegen/, ...
+
+Il est possible d'écrire la spécification de l'API en [JSON](https://fr.wikipedia.org/wiki/JavaScript_Object_Notation) dans un fichier `swagger.json` ou en [YAML](https://fr.wikipedia.org/wiki/YAML) dans un fichier `openapi.yaml`.
+
+Pour cela, on peut utiliser l'[éditeur en ligne](http://editor.swagger.io/) : http://editor.swagger.io/.
+
+> [Swagger Editor](http://swagger.io/swagger-ui/) peut être utilisé en local sur la machine : https://swagger.io/docs/open-source-tools/swagger-editor/
+
+La structure de base du fichier possède notamment les propriétés suivantes :
+
+- `openapi` : indique la version des spécifications utilisées
+- `servers` : définit les paramètres, comme l'[URL](https://fr.wikipedia.org/wiki/Uniform_Resource_Locator) de base, du (ou des) serveur(s)
+- `info` : décrit des informations (métadonnées) sur l'API
+- `paths` : définit les [URL](https://fr.wikipedia.org/wiki/Uniform_Resource_Locator)s et les opérations de l'API (`get`, `post`, ...)
+- `components` : contient un ensemble d’objets réutilisables et explicitement référencés à partir des propriétés définies dans `paths`
+
+Exemple pour un ESP32 : [specifications/openapi-v1.yaml](./specifications/openapi-v1.yaml)
+
+```yaml
+openapi: 3.0.3
+info:
+  title: API Exemple ESP32
+  version: "1.0"
+  description: Voir [api-http-rest](https://github.com/bts-lasalle-avignon-ressources/api-http-rest)
+  contact:
+    name: OpenExempleESP32
+    email: tvaira@free.fr
+    url: http://tvaira.free.fr
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: https://{adresseIPESP32}
+    description: L'IoT ESP32
+    variables:
+      adresseIPESP32:
+        default: 192.168.0.1
+        description: |
+          Aller sur http://iot-esp32.local/
+  - url: http://localhost:5000
+tags:
+  - name: leds
+    description: Les leds de l'ESP32
+  - name: led
+    description: Toutes les opérations sur une Led de l'ESP32
+paths:
+  /leds:
+    get:
+      summary: Lister les leds
+      description: Lister toutes les leds disponibles
+      operationId: getLeds
+      tags:
+        - leds
+      responses:
+        "200":
+          description: Succès de l'opération
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/getLeds"
+  /led/{idLed}:
+    parameters:
+      - name: idLed
+        in: path
+        description: ID de la led
+        required: true
+        schema:
+          type: integer
+          format: int32
+    get:
+      summary: Obtenir les détails d'une Led
+      description: Obtenir les détails d'une seule Led `{idLed}`
+      operationId: getLed
+      tags:
+        - led
+      responses:
+        "200":
+          description: Succès de la réponse
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Led"
+        default:
+          description: Erreur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+    put:
+      summary: Mettre à jour une Led
+      description: Mettre à jour l'état d'une Led `{idLed}`
+      operationId: updateLed
+      tags:
+        - led
+      requestBody:
+        description: Met à jour l'état d'une Led
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Led"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/Led"
+        required: true
+      responses:
+        "200":
+          description: Succès de l'opération
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Led"
+        "404":
+          description: Led non trouvée
+    post:
+      summary: Mettre à jour une Led
+      description: Mettre à jour l'état d'une Led `{idLed}`
+      operationId: updateLedWithForm
+      tags:
+        - led
+      requestBody:
+        description: Créer une Led
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Led"
+        required: true
+      responses:
+        "400":
+          description: Formulaire invalide
+    delete:
+      summary: Supprimer une Led
+      description: Supprimer une Led `{idLed}`
+      operationId: deleteLed
+      tags:
+        - led
+      responses:
+        "400":
+          description: ID invalide
+  /led:
+    post:
+      tags:
+        - led
+      summary: Ajouter une Led
+      description: Ajouter une nouvelle Led
+      operationId: addPet
+      requestBody:
+        description: Créer une Led
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Led"
+        required: true
+      responses:
+        "200":
+          description: Succès de l'operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Led"
+        "400":
+          description: Formulaire invalide
+components:
+  schemas:
+    getLeds:
+      type: array
+      items:
+        $ref: "#/components/schemas/Led"
+    Led:
+      type: object
+      description: Une Led
+      required:
+        - idLed
+        - etat
+      properties:
+        idLed:
+          type: integer
+          format: int32
+        etat:
+          type: boolean
+          description: |
+            `true` si la led est allumée sinon `false`
+        couleur:
+          type: string
+          enum:
+            - rouge
+            - verte
+        broche:
+          type: integer
+          description: GPIO OUTPUT
+          format: int32
+          enum:
+            - 4
+            - 5
+            - 13
+            - 14
+            - 18
+            - 19
+            - 19
+            - 21
+            - 22
+            - 23
+            - 25
+            - 26
+            - 27
+            - 32
+            - 33
+    Erreur:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+```
+
+![](./images/openapi-operations.png)
+
+![](./images/openapi-schemas.png)
 
 ## Outils
 
@@ -218,6 +446,15 @@ Et il existe une extension pour Visual Studio Code : https://marketplace.visuals
 
 ## Application serveur HTTP
 
+### Générateur
+
+Il est possible de générer le code du serveur :
+
+- http://swagger.io/swagger-codegen/
+- directement dans [Swagger Editor](http://swagger.io/swagger-ui/)
+
+![](./images/generate-server.png)
+
 ### ESP32
 
 ### Python
@@ -226,9 +463,13 @@ Et il existe une extension pour Visual Studio Code : https://marketplace.visuals
 
 ## Application cliente HTTP
 
-Pour faire simple, cela revient à émettre des requêtes HTTP et le plus souvent à traiter du JSON.
+Pour faire simple, cela revient à émettre des requêtes HTTP et le plus souvent à traiter du JSON ou du XML.
 
 ### Générateur
+
+Il est possible de générer le code du client directement dans [Swagger Editor](http://swagger.io/swagger-ui/).
+
+![](./images/generate-client.png)
 
 Des utilitaires comme [Postman](https://www.postman.com/) fournissent des extraits de code à réutiliser :
 
@@ -239,8 +480,6 @@ Par exemple pour Java :
 ![](./images/postman-code-snippet-java.png)
 
 Il existe aussi [OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator-cli) qui permet la génération de bibliothèques clientes d'API HTTP avec une spécification [OpenAPI](https://swagger.io/specification/).
-
-> [OpenAPI](https://swagger.io/specification/) est une norme de description des API HTTP conformes à l’architecture REST. La spécification OpenAPI actuelle découle d’un projet antérieur nommé [Swagger](https://swagger.io/) (cf. https://www.ionos.fr/digitalguide/sites-internet/developpement-web/quest-ce-que-openapi/).
 
 Liens :
 
