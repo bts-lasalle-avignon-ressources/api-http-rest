@@ -13,9 +13,8 @@
     - [IoT](#iot)
   - [REST](#rest)
   - [OpenAPI](#openapi)
-  - [Outils](#outils)
-    - [CLI](#cli)
-    - [Postman](#postman)
+    - [Exemple pour un IoT ESP32](#exemple-pour-un-iot-esp32)
+    - [SwaggerHub](#swaggerhub)
   - [Application serveur HTTP](#application-serveur-http)
     - [Générateur](#générateur)
     - [ESP32](#esp32)
@@ -26,6 +25,10 @@
     - [Android Java](#android-java)
     - [Qt C++](#qt-c)
     - [Python](#python-1)
+  - [Annexes : outils](#annexes--outils)
+    - [CLI](#cli)
+    - [Postman](#postman)
+    - [bruno](#bruno)
   - [Auteurs](#auteurs)
 
 ---
@@ -201,7 +204,9 @@ La structure de base du fichier possède notamment les propriétés suivantes :
 - `paths` : définit les [URL](https://fr.wikipedia.org/wiki/Uniform_Resource_Locator)s et les opérations de l'API (`get`, `post`, ...)
 - `components` : contient un ensemble d’objets réutilisables et explicitement référencés à partir des propriétés définies dans `paths`
 
-Exemple pour un ESP32 : [specifications/openapi-v1.yaml](./specifications/openapi-v1.yaml)
+### Exemple pour un IoT ESP32
+
+cf. [specifications/openapi-v1.yaml](./specifications/openapi-v1.yaml)
 
 ```yaml
 openapi: 3.0.3
@@ -408,41 +413,42 @@ components:
 
 ![](./images/openapi-schemas.png)
 
-## Outils
+### SwaggerHub
 
-### CLI
+[SwaggerHub](https://swagger.io/tools/swaggerhub/) est une plateforme pour créer, concevoir, documenter et tester des API (privées et publiques). Il propose un éditeur interactif, un portail de documentation hébergé, et [SwaggerHub Explore](https://explore.swaggerhub.com/) qui permet d'interagir avec les API.
 
-Il est évidemment possible d'interagir avec une API Web tout simplement avec les commandes `curl` ou `wget`.
+![](./images/swaggerhub-tvaira.png)
 
-### Postman
+SwaggerHub Explore :
 
-[Postman](https://fr.wikipedia.org/wiki/Postman_(logiciel)) est une plateforme pour la construction, l'utilisation et les tests d'API Web.
+![](./images/swaggerhub-explore-tvaira.png)
 
-Lien : https://www.postman.com/
+Tests :
 
-Télécharger et installer la version de [Postman](https://dl.pstmn.io/download/latest/linux_64) pour Linux : https://dl.pstmn.io/download/latest/linux_64
-
-Ou à partir du gestionnaire de paquets _snap_ :
+![](./images/virtserver-swaggerhub-tvaira.png)
 
 ```bash
-$ sudo snap install postman
+$ curl -k --location https://virtserver.swaggerhub.com/TVAIRA/ESP32/1.0/leds
+[ {
+  "idLed" : 1,
+  "etat" : false,
+  "couleur" : "rouge",
+  "broche" : 4
+}, {
+  "idLed" : 2,
+  "etat" : false,
+  "couleur" : "verte",
+  "broche" : 5
+} ]
+
+$ curl -k --location https://virtserver.swaggerhub.com/TVAIRA/ESP32/1.0/led/1
+{
+  "idLed" : 1,
+  "etat" : false,
+  "couleur" : "rouge",
+  "broche" : 4
+}
 ```
-
-![](./images/demarrer-postman-ubuntu.png)
-
-![](./images/postman-ubuntu.png)
-
-> Créer un compte si besoin.
-
-Il existe aussi un outil en ligne de commande Postman CLI :
-
-```bash
-$ curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
-```
-
-Et il existe une extension pour Visual Studio Code : https://marketplace.visualstudio.com/items?itemName=Postman.postman-for-vscode
-
-> Voir aussi : [bruno](https://www.usebruno.com/), https://hevodata.com/learn/rest-clients/, ...
 
 ## Application serveur HTTP
 
@@ -559,6 +565,44 @@ response = requests.request("GET", url, headers=headers, data=payload)
 
 print(response.text)
 ```
+
+## Annexes : outils
+
+### CLI
+
+Il est évidemment possible d'interagir avec une API Web tout simplement avec les commandes `curl` ou `wget`.
+
+### Postman
+
+[Postman](https://fr.wikipedia.org/wiki/Postman_(logiciel)) est une plateforme pour la construction, l'utilisation et les tests d'API Web.
+
+Lien : https://www.postman.com/
+
+Télécharger et installer la version de [Postman](https://dl.pstmn.io/download/latest/linux_64) pour Linux : https://dl.pstmn.io/download/latest/linux_64
+
+Ou à partir du gestionnaire de paquets _snap_ :
+
+```bash
+$ sudo snap install postman
+```
+
+![](./images/demarrer-postman-ubuntu.png)
+
+![](./images/postman-ubuntu.png)
+
+> Créer un compte si besoin.
+
+Il existe aussi un outil en ligne de commande Postman CLI :
+
+```bash
+$ curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+```
+
+Et il existe une extension pour Visual Studio Code : https://marketplace.visualstudio.com/items?itemName=Postman.postman-for-vscode
+
+### bruno
+
+Voir aussi : [bruno](https://www.usebruno.com/), https://hevodata.com/learn/rest-clients/, ...
 
 ## Auteurs
 
