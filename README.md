@@ -463,6 +463,8 @@ Il est possible de générer le code du serveur :
 
 ### ESP32
 
+cf. [src/serveur-esp32/](src/serveur-esp32/)
+
 ### Python
 
 ### Node.js
