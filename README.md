@@ -220,7 +220,7 @@ info:
     name: Apache 2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
 servers:
-  - url: https://{adresseIPESP32}
+  - url: http://{adresseIPESP32}
     description: L'IoT ESP32
     variables:
       adresseIPESP32:
@@ -228,6 +228,8 @@ servers:
         description: |
           Aller sur http://iot-esp32.local/
   - url: http://localhost:5000
+  - url: https://virtserver.swaggerhub.com/TVAIRA/ESP32/1.0
+    description: SwaggerHub API Auto Mocking
 tags:
   - name: leds
     description: Les leds de l'ESP32
@@ -265,25 +267,34 @@ paths:
         - led
       responses:
         "200":
-          description: Succès de la réponse
+          description: Succès
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Led"
-        default:
-          description: Erreur
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Erreur"
+              examples:
+                LedRouge:
+                  value:
+                    idLed: 1
+                    etat: false
+                    couleur: "rouge"
+                    broche: 5
+                LedVerte:
+                  value:
+                    idLed: 2
+                    etat: true
+                    couleur: "verte"
+                    broche: 16
+        "404":
+          description: Led non trouvée
     put:
       summary: Mettre à jour une Led
-      description: Mettre à jour l'état d'une Led `{idLed}`
+      description: Mettre à jour les informations d'une Led `{idLed}`
       operationId: updateLed
       tags:
         - led
       requestBody:
-        description: Met à jour l'état d'une Led
+        description: Met à jour les informations d'une Led
         content:
           application/json:
             schema:
@@ -299,16 +310,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Led"
-        "404":
-          description: Led non trouvée
+        "400":
+          description: Opération invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+              examples:
+                DemandeIncomplete:
+                  value:
+                    code: 1
+                    message: "La demande est incomplète"
+                DemandeInvalide:
+                  value:
+                    code: 2
+                    message: "La demande est invalide"
     post:
       summary: Mettre à jour une Led
-      description: Mettre à jour l'état d'une Led `{idLed}`
+      description: Mettre à jour les informations d'une Led `{idLed}`
       operationId: updateLedWithForm
       tags:
         - led
       requestBody:
-        description: Créer une Led
+        description: Met à jour les informations d'une Led
         content:
           application/json:
             schema:
@@ -316,7 +340,20 @@ paths:
         required: true
       responses:
         "400":
-          description: Formulaire invalide
+          description: Opération invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+              examples:
+                DemandeIncomplete:
+                  value:
+                    code: 1
+                    message: "La demande est incomplète"
+                DemandeInvalide:
+                  value:
+                    code: 2
+                    message: "La demande est invalide"
     delete:
       summary: Supprimer une Led
       description: Supprimer une Led `{idLed}`
@@ -325,7 +362,20 @@ paths:
         - led
       responses:
         "400":
-          description: ID invalide
+          description: Opération invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+              examples:
+                DemandeIncomplete:
+                  value:
+                    code: 1
+                    message: "La demande est incomplète"
+                DemandeInvalide:
+                  value:
+                    code: 2
+                    message: "La demande est invalide"
   /led:
     post:
       tags:
@@ -334,27 +384,45 @@ paths:
       description: Ajouter une nouvelle Led
       operationId: addLed
       requestBody:
-        description: Créer une Led
+        description: Ajout d'une Led
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Led"
+              $ref: "#/components/schemas/NewLed"
         required: true
       responses:
         "200":
-          description: Succès de l'operation
+          description: Succès
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Led"
         "400":
-          description: Formulaire invalide
+          description: Opération invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+              examples:
+                DemandeIncomplete:
+                  value:
+                    code: 1
+                    message: "La demande est incomplète"
+                DemandeInvalide:
+                  value:
+                    code: 2
+                    message: "La demande est invalide"
 components:
   schemas:
     getLeds:
       type: array
       items:
         $ref: "#/components/schemas/Led"
+      example:
+        [
+          { "idLed": 1, "etat": false, "couleur": "rouge", "broche": 5 },
+          { "idLed": 2, "etat": false, "couleur": "verte", "broche": 16 },
+        ]
     Led:
       type: object
       description: Une Led
@@ -374,6 +442,7 @@ components:
           enum:
             - rouge
             - verte
+            - orange
         broche:
           type: integer
           description: GPIO OUTPUT
@@ -383,8 +452,43 @@ components:
             - 5
             - 13
             - 14
+            - 16
+            - 17
             - 18
             - 19
+            - 21
+            - 22
+            - 23
+            - 25
+            - 26
+            - 27
+            - 32
+            - 33
+    NewLed:
+      type: object
+      description: Une Led
+      required:
+        - couleur
+        - broche
+      properties:
+        couleur:
+          type: string
+          enum:
+            - rouge
+            - verte
+            - orange
+        broche:
+          type: integer
+          description: GPIO OUTPUT
+          format: int32
+          enum:
+            - 4
+            - 5
+            - 13
+            - 14
+            - 16
+            - 17
+            - 18
             - 19
             - 21
             - 22
@@ -680,8 +784,6 @@ $ sudo snap install postman
 ```
 
 ![](./images/demarrer-postman-ubuntu.png)
-
-![](./images/postman-ubuntu.png)
 
 > Créer un compte si besoin.
 
