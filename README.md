@@ -467,7 +467,15 @@ cf. [src/serveur-esp32/](src/serveur-esp32/)
 
 ### Python
 
+Il est possible de créer un serveur HTTP API REST avec [Flask](https://pypi.org/project/Flask/) en [Python](https://www.python.org/).
+
+Tutoriel : https://pythonbasics.org/flask-rest-api/
+
 ### Node.js
+
+Il est possible de créer un serveur HTTP API REST avec [Express](http://expressjs.com/) avec [Node.js](https://nodejs.org/).
+
+Tutoriel : https://node-js.fr/express/rest.html
 
 ## Application cliente HTTP
 
