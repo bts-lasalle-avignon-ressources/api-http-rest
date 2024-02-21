@@ -18,6 +18,8 @@
   - [Application serveur HTTP](#application-serveur-http)
     - [Générateur](#générateur)
     - [ESP32](#esp32)
+        - [CLI (`curl`)](#cli-curl)
+        - [Postman](#postman)
     - [Python](#python)
     - [Node.js](#nodejs)
   - [Application cliente HTTP](#application-cliente-http)
@@ -25,10 +27,6 @@
     - [Android Java](#android-java)
     - [Qt C++](#qt-c)
     - [Python](#python-1)
-  - [Annexes : outils](#annexes--outils)
-    - [CLI](#cli)
-    - [Postman](#postman)
-    - [bruno](#bruno)
   - [Auteurs](#auteurs)
 
 ---
@@ -334,7 +332,7 @@ paths:
         - led
       summary: Ajouter une Led
       description: Ajouter une nouvelle Led
-      operationId: addPet
+      operationId: addLed
       requestBody:
         description: Créer une Led
         content:
@@ -465,6 +463,250 @@ Il est possible de générer le code du serveur :
 
 cf. [src/serveur-esp32/](src/serveur-esp32/)
 
+On réalise le serveur web en héritant de la classe [WebServer](https://github.com/espressif/arduino-esp32/blob/master/libraries/WebServer/src/WebServer.h)  :
+
+```cpp
+#include <WebServer.h>
+
+#define PORT_SERVEUR_WEB 80
+
+class ServeurWeb : public WebServer
+{
+private:
+    // ...
+    void installerGestionnairesRequetes();
+    void afficherAccueil();
+    void traiterRequeteGetLeds();
+    void traiterRequeteNonTrouvee();
+    // ...
+
+public:
+    ServeurWeb(uint16_t port = PORT_SERVEUR_WEB);
+    // ...
+    void traiterRequetes();
+    // ...
+};
+```
+
+Extrait de la classe [WebServer](https://github.com/espressif/arduino-esp32/blob/master/libraries/WebServer/src/WebServer.h) :
+
+```cpp
+class WebServer
+{
+public:
+    //...
+    typedef std::function<void(void)> THandlerFunction;
+
+    void on(const Uri &uri, THandlerFunction fn);
+    void on(const Uri &uri, HTTPMethod method, THandlerFunction fn);
+    void on(const Uri &uri, HTTPMethod method, THandlerFunction fn, THandlerFunction ufn); //ufn handles file uploads
+    void onNotFound(THandlerFunction fn);  //called when handler is not assigned
+    //...
+};
+```
+
+> [!IMPORTANT]
+> Les explications sur l'utilisation de `std::function` sont fournies dans ce [document](https://github.com/bts-lasalle-avignon-ressources/callback/).
+
+Les méthodes `on()` et `onNotFound()` vont permettre de définir les opérations de l'API REST.
+
+Elles attendent en paramètre la **fonction de rappel** qui sera déclenchée lors d'une requête HTTP et qui en assurera le traitement.
+
+Mais les fonctions de rappel sont déclarées dans la classe `ServeurWeb` (`traiterRequeteGetLeds()` par exemple) et cela pose un problème en C++ : les fonctions déclarées au sein d'une classe sont nommées des fonctions membres ou **méthodes**. Et ces méthodes n’existeront **seulement** lors de l'instanciation d'un objet de cette classe.
+
+La solution est d'utiliser l'appel `bind()` pour obtenir l'**adresse de la méthode d'un objet**. La fonction `bind()` reçoit en paramètre la méthode (`&ServeurWeb::traiterRequeteGetLeds` par exemple) et l'adresse de l'objet (ici `this`) qui la possède et retourne l'adresse de cette méthode.
+
+> [!IMPORTANT]
+> Les explications sur l'utilisation de `std::bind` et des fonctions de rappel (_callback_)sont fournies dans ce [document](https://github.com/bts-lasalle-avignon-ressources/callback/).
+
+L'appel `bind()` permet d'utiliser les méthodes d'une classe comme fonction de rappel :
+
+```cpp
+ServeurWeb::ServeurWeb(uint16_t port /*= PORT_SERVEUR_WEB*/) :  WebServer(PORT_SERVEUR_WEB)
+{
+}
+
+void ServeurWeb::installerGestionnairesRequetes()
+{
+    // Installe les gestionnaires de requêtes
+    on("/", HTTP_GET, std::bind(&ServeurWeb::afficherAccueil, this));
+    on("/leds", HTTP_GET, std::bind(&ServeurWeb::traiterRequeteGetLeds, this));
+    // ...
+    onNotFound(std::bind(&ServeurWeb::traiterRequeteNonTrouvee, this));
+
+    // Démarre le serveur
+    begin();
+}
+
+void ServeurWeb::traiterRequetes()
+{
+    handleClient();
+}
+
+void ServeurWeb::afficherAccueil()
+{
+    String message = "<h1>Bienvenue ...</h1>\n";
+    message += "<p>LaSalle Avignon v1.0</p>\n";
+    send(200, F("text/html"), message);
+}
+
+void ServeurWeb::traiterRequeteGetLeds()
+{
+  // ...
+}
+
+void ServeurWeb::traiterRequeteNonTrouvee()
+{
+    String message = "404 File Not Found\n\n";
+    message += "URI: ";
+    message += uri();
+    message += "\nMethod: ";
+    message += (method() == HTTP_GET) ? "GET" : "POST";
+    message += "\nArguments: ";
+    message += args();
+    message += "\n";
+    for(uint8_t i = 0; i < args(); i++)
+    {
+        message += " " + argName(i) + ": " + arg(i) + "\n";
+    }
+    send(404, "text/plain", message);
+}
+```
+
+[ArduinoJson](https://arduinojson.org/)
+
+> Voir aussi :[ArduinoJson Assistant](https://arduinojson.org/v6/assistant/)
+
+#### Tests
+
+##### CLI (`curl`)
+
+Il est évidemment possible d'interagir avec une API Web tout simplement avec la commande `curl` (ou `wget`).
+
+- Lister les Leds (`GET`) :
+
+```bash
+$ curl --location http://192.168.52.196/leds
+[{"idLed":1,"etat":false,"couleur":"rouge","broche":4},{"idLed":2,"etat":false,"couleur":"verte","broche":5}]
+```
+
+- Modifier une Led (`PUT`) :
+
+```bash
+$ curl --location --request PUT 'http://192.168.52.196/led/2' \
+--header 'Content-Type: application/x-www-form-urlencoded' \
+--header 'Accept: application/json' \
+--data-urlencode 'idLed=2' \
+--data-urlencode 'etat=true' \
+--data-urlencode 'couleur=verte' \
+--data-urlencode 'broche=16'
+[{"idLed":2,"etat":true,"couleur":"verte","broche":16}]
+```
+
+- Modifier une Led (`POST`) :
+
+```bash
+$ curl --location 'http://192.168.52.196/led/1' \
+--header 'Content-Type: application/json' \
+--data '{
+  "idLed": "1",
+  "etat": true,
+  "couleur": "rouge",
+  "broche": 5
+}'
+[{"idLed":1,"etat":true,"couleur":"rouge","broche":5}]
+```
+
+- Obtenir les informations sur une Led (`GET`) :
+
+```bash
+$ curl --location http://192.168.52.196/led/1
+[{"idLed":1,"etat":true,"couleur":"rouge","broche":5}]
+$ curl --location http://192.168.52.196/led/2
+[{"idLed":2,"etat":true,"couleur":"verte","broche":16}]
+```
+
+- Ajouter une nouvelle Led (`POST`) :
+
+```bash
+$ curl --location 'http://192.168.52.196/led' \
+--header 'Content-Type: application/json' \
+--header 'Accept: application/json' \
+--data '{
+  "couleur": "orange",
+  "broche": 17
+}'
+[{"idLed":3,"etat":false,"couleur":"orange","broche":17}]
+```
+
+- Supprimer une Led (`DELETE`) :
+
+```bash
+$ curl --location --request DELETE 'http://192.168.52.196/led/3'
+```
+
+- Quelques erreurs :
+
+```bash
+$ curl --location http://192.168.52.196/led/4
+404 Led non trouvée
+```
+
+Une broche invalide :
+
+```bash
+$ curl --location 'http://192.168.52.196/led' \
+--header 'Content-Type: application/json' \
+--header 'Accept: application/json' \
+--data '{
+  "couleur": "orange",
+  "broche": 40
+}'
+{"code": 2,"message": "La demande est invalide"}
+```
+
+##### Postman
+
+[Postman](https://fr.wikipedia.org/wiki/Postman_(logiciel)) est une plateforme pour la construction, l'utilisation et les tests d'API Web.
+
+Lien : https://www.postman.com/
+
+Télécharger et installer la version de [Postman](https://dl.pstmn.io/download/latest/linux_64) pour Linux : https://dl.pstmn.io/download/latest/linux_64
+
+Ou à partir du gestionnaire de paquets _snap_ :
+
+```bash
+$ sudo snap install postman
+```
+
+![](./images/demarrer-postman-ubuntu.png)
+
+![](./images/postman-ubuntu.png)
+
+> Créer un compte si besoin.
+
+Il existe aussi un outil en ligne de commande Postman CLI :
+
+```bash
+$ curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+```
+
+Et il existe une extension pour Visual Studio Code : https://marketplace.visualstudio.com/items?itemName=Postman.postman-for-vscode
+
+> Voir aussi : [bruno](https://www.usebruno.com/), https://hevodata.com/learn/rest-clients/, ...
+
+1. On commence par importer le fichier de spécifications [openapi-v1.yaml](./specifications/openapi-v1.yaml)
+
+![](./images/postman-import-esp32.png)
+
+2. On crée un environnement et une variable `{adresseIPESP32}` dans celui-ci :
+
+![](./images/postman-environement-esp32.png)
+
+3. On teste une requête :
+
+![](./images/postman-getleds-esp32.png)
+
 ### Python
 
 Il est possible de créer un serveur HTTP API REST avec [Flask](https://pypi.org/project/Flask/) en [Python](https://www.python.org/).
@@ -575,44 +817,6 @@ response = requests.request("GET", url, headers=headers, data=payload)
 
 print(response.text)
 ```
-
-## Annexes : outils
-
-### CLI
-
-Il est évidemment possible d'interagir avec une API Web tout simplement avec les commandes `curl` ou `wget`.
-
-### Postman
-
-[Postman](https://fr.wikipedia.org/wiki/Postman_(logiciel)) est une plateforme pour la construction, l'utilisation et les tests d'API Web.
-
-Lien : https://www.postman.com/
-
-Télécharger et installer la version de [Postman](https://dl.pstmn.io/download/latest/linux_64) pour Linux : https://dl.pstmn.io/download/latest/linux_64
-
-Ou à partir du gestionnaire de paquets _snap_ :
-
-```bash
-$ sudo snap install postman
-```
-
-![](./images/demarrer-postman-ubuntu.png)
-
-![](./images/postman-ubuntu.png)
-
-> Créer un compte si besoin.
-
-Il existe aussi un outil en ligne de commande Postman CLI :
-
-```bash
-$ curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
-```
-
-Et il existe une extension pour Visual Studio Code : https://marketplace.visualstudio.com/items?itemName=Postman.postman-for-vscode
-
-### bruno
-
-Voir aussi : [bruno](https://www.usebruno.com/), https://hevodata.com/learn/rest-clients/, ...
 
 ## Auteurs
 
