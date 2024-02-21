@@ -11,9 +11,17 @@ info:
     name: Apache 2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
 servers:
-  # Added by API Auto Mocking Plugin
-  - description: SwaggerHub API Auto Mocking
-    url: https://virtserver.swaggerhub.com/TVAIRA/ESP32/1.0
+  - url: http://{adresseIPESP32}
+    description: L'IoT ESP32
+    variables:
+      adresseIPESP32:
+        default: 192.168.0.1
+        description: |
+          Aller sur http://iot-esp32.local/
+  - url: http://localhost:5000
+  - url: https://virtserver.swaggerhub.com/TVAIRA/ESP32/1.0
+    description: SwaggerHub API Auto Mocking
+
 tags:
   - name: leds
     description: Les leds de l'ESP32
@@ -140,7 +148,7 @@ paths:
         - led
       summary: Ajouter une Led
       description: Ajouter une nouvelle Led
-      operationId: addPet
+      operationId: addLed
       requestBody:
         description: Créer une Led
         content:
