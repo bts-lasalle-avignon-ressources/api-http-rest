@@ -8,39 +8,21 @@
 #ifndef SERVEURWEB_H
 #define SERVEURWEB_H
 
-#include <Arduino.h>
+#include "../../include/serveur-esp32.h"
+#include "Led.h"
 #include <WebServer.h>
 #include <Preferences.h>
+#include <vector>
 #include <ArduinoJson.h>
 
 #define DEBUG_SERVEUR_WEB
 
-/**
- * @def NOM_SERVEUR_WEB
- * @brief Le nom du serveur web (http://iot-esp32.local/)
- */
-#define NOM_SERVEUR_WEB "iot-esp32"
-
-/**
- * @def PORT_SERVEUR_WEB
- * @brief Le numéro de port du serveur web
- */
-#define PORT_SERVEUR_WEB 80
-
-/**
- * @def TAILLE_JSON
- * @brief Définit la taille en octets max pour un document JSON
- */
-#define TAILLE_JSON 256
-
 #define NB_LEDS 2
 
-enum CouleurLed
-{
-    ROUGE,
-    VERTE,
-    NB_COULEURS
-};
+// Brochages
+#define GPIO_LED_ROUGE  5  //!< La Led rouge
+#define GPIO_LED_VERTE  16 //!< La Led verte
+#define GPIO_LED_ORANGE 17 //!< La Led orange
 
 /**
  * @class ServeurWeb
@@ -51,30 +33,36 @@ class ServeurWeb : public WebServer
   private:
     Preferences preferences; //!< pour le stockage interne
     StaticJsonDocument<TAILLE_JSON>
-           documentJSON;                   //!< pour traiter les données JSON
-    int    idLeds[NB_LEDS]     = { 1, 2 }; //!< l'idLed des leds
-    bool   etatLedS[NB_LEDS]   = { false, false }; //!< l'état des leds
-    int    brocheLeds[NB_LEDS] = { 4, 5 }; //!< le numero de broche des leds
-    String couleurLeds[NB_COULEURS] = { "rouge",
-                                        "verte" }; //!< la couleur des leds
+                      documentJSON; //!< pour traiter les données JSON
+    std::vector<Led*> leds;
 
     void   setNom(String nomServeurWeb = NOM_SERVEUR_WEB);
     void   installerGestionnairesRequetes();
     void   afficherAccueil();
-    void   traiterRequeteGetLeds();
-    void   traiterRequeteGETLed();
-    void   traiterRequetePOSTLed();
-    void   traiterRequetePUTLed();
-    void   traiterRequeteDELETELed();
+    void   traiterRequeteGetLeds();           // GET
+    void   traiterRequeteGetLed();            // GET
+    void   traiterRequeteUpdateLedWithForm(); // POST
+    void   traiterRequeteUpdateLed();         // PUT
+    void   traiterRequeteDeleteLed();         // DELETE
+    void   traiterRequeteAddLed();            // POST
     void   traiterRequeteNonTrouvee();
     int    extraireIdLed();
     bool   extraireEtat();
     int    extraireNumeroBroche();
     String extraireCouleur();
+    bool   estCouleurValide(String couleur) const;
+    bool   estCouleurValide(CouleurLed couleur) const;
+    bool   estBrocheValide(int broche) const;
+    bool   estRequeteUpdateLedWithFormPossible();
+    bool   estRequeteUpdateLedPossible();
+    bool   estRequeteDeleteLedPossible();
+    bool   estAjoutPossible();
+    void   commanderLed(int broche, bool etat);
 
   public:
     ServeurWeb(uint16_t port = PORT_SERVEUR_WEB);
     void initialiserPreferences();
+    void initialiserLeds();
     void demarrer();
     void traiterRequetes();
 };
