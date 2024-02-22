@@ -23,9 +23,9 @@
     - [Swagger Codegen](#swagger-codegen)
   - [Application serveur HTTP](#application-serveur-http)
     - [ESP32](#esp32)
-      - [Code source](#code-source)
-        - [CLI (`curl`)](#cli-curl)
-        - [Postman](#postman-1)
+      - [Serveur web](#serveur-web)
+      - [Tests CLI avec `curl`](#tests-cli-avec-curl)
+      - [Tests avec Postman](#tests-avec-postman)
     - [Python](#python)
     - [Node.js](#nodejs)
   - [Application cliente HTTP](#application-cliente-http)
@@ -505,7 +505,7 @@ $ java -jar modules/swagger-codegen-cli/target/swagger-codegen-cli.jar generate 
 
 L'exemple de base présenté ici tourne autour d'un [ESP32](https://fr.wikipedia.org/wiki/ESP32). L'API REST définie ci-dessus (cf. [specifications/openapi-v1.yaml](./specifications/openapi-v1.yaml)) va permettre de gérer des Leds rouges et vertes reliées sur les broches [GPIO](https://fr.wikipedia.org/wiki/General_Purpose_Input/Output).
 
-#### Code source
+#### Serveur web
 
 > Code source complet : [src/serveur-esp32/](src/serveur-esp32/)
 
@@ -704,9 +704,7 @@ if(objetJSON.containsKey("idLed"))
 }
 ```
 
-#### Tests
-
-##### CLI (`curl`)
+#### Tests CLI avec `curl`
 
 Il est évidemment possible d'interagir avec une API Web tout simplement avec la commande `curl` (ou `wget`).
 
@@ -792,7 +790,7 @@ $ curl --location 'http://192.168.52.196/led' \
 {"code": 2,"message": "La demande est invalide"}
 ```
 
-##### Postman
+#### Tests avec Postman
 
 [Postman](https://fr.wikipedia.org/wiki/Postman_(logiciel)) est une plateforme pour la construction, l'utilisation et les tests d'API Web.
 
