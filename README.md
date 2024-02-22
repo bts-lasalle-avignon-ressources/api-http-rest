@@ -244,9 +244,11 @@ servers:
     description: SwaggerHub API Auto Mocking
 ```
 
+> Le serveur `SwaggerHub` permettra de tester l'API en simulation (notion de [mock](https://fr.wikipedia.org/wiki/Mock_(programmation_orient%C3%A9e_objet))) avec les propriétés `example` définis dans la spécification.
+
 L'API est ensuite documentée avec les propriétés `paths` et `components` :
 
-- pour une rquête `GET` sur `/leds` :
+- pour une requête `GET` sur `/leds` :
 
 ```yaml
 ...
@@ -360,9 +362,11 @@ Avec l'[éditeur en ligne](http://editor.swagger.io/) : http://editor.swagger.io
 
 ![](./images/swaggerhub-tvaira.png)
 
-SwaggerHub Explore :
+SwaggerHub Explore permet de tester l'API :
 
 ![](./images/swaggerhub-explore-tvaira.png)
+
+> Le serveur [virtserver.swaggerhub.com](https://virtserver.swaggerhub.com/TVAIRA/ESP32/1.0) permet de tester l'API en simulation (notion de [mock](https://fr.wikipedia.org/wiki/Mock_(programmation_orient%C3%A9e_objet))) avec les `example` définis dans la spécification.
 
 Tests :
 
