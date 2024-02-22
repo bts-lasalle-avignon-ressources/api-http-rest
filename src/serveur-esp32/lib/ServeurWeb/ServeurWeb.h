@@ -17,8 +17,6 @@
 
 #define DEBUG_SERVEUR_WEB
 
-#define NB_LEDS 2
-
 // Brochages
 #define GPIO_LED_ROUGE  5  //!< La Led rouge
 #define GPIO_LED_VERTE  16 //!< La Led verte
@@ -35,6 +33,7 @@ class ServeurWeb : public WebServer
     StaticJsonDocument<TAILLE_JSON>
                       documentJSON; //!< pour traiter les données JSON
     std::vector<Led*> leds;
+    std::vector<bool> brochesDisponibles;
 
     void   setNom(String nomServeurWeb = NOM_SERVEUR_WEB);
     void   installerGestionnairesRequetes();
@@ -53,11 +52,12 @@ class ServeurWeb : public WebServer
     bool   estCouleurValide(String couleur) const;
     bool   estCouleurValide(CouleurLed couleur) const;
     bool   estBrocheValide(int broche) const;
+    bool   estBrocheDisponible(int broche) const;
+    bool   estRequeteGetLedPossible();
     bool   estRequeteUpdateLedWithFormPossible();
     bool   estRequeteUpdateLedPossible();
     bool   estRequeteDeleteLedPossible();
     bool   estAjoutPossible();
-    void   commanderLed(int broche, bool etat);
 
   public:
     ServeurWeb(uint16_t port = PORT_SERVEUR_WEB);

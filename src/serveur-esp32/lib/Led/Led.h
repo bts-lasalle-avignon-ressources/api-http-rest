@@ -49,11 +49,12 @@ class Led
     int        getNumeroBroche() const;
     String     getCouleur() const;
     JsonObject getObjetJSON() const;
-
-    void setEtat(bool etat);
-    void setNumeroBroche(int broche);
-    void setCouleur(String couleur);
-    void setCouleur(CouleurLed couleur);
+    void       setEtat(bool etat);
+    void       setNumeroBroche(int broche);
+    void       setCouleur(String couleur);
+    void       setCouleur(CouleurLed couleur);
+    void       commanderLed();
+    void       setObjetJSON(JsonObject& objetJSON) const;
 
     static String getNomCouleur(CouleurLed couleur);
 };

@@ -10,14 +10,17 @@
 /**
  * @brief Constructeur de la classe Led
  * @fn Led::Led
- * @param port Le port du serveur web
- * @details Initialise un nouvel objet Led en utilisant le constructeur
- * de la classe de base WebServer.
+ * @param idLed L'identifiant de la Led
+ * @param etat L'état de la Led
+ * @param couleur La couleur de la Led
+ * @param broche Le numéro de broche de la Led
+ * @details Initialise un nouvel objet Led
  */
 Led::Led(int idLed, bool etat, String couleur, int broche) :
     idLed(idLed), etat(etat), couleur(couleur), broche(broche)
 {
 #ifdef DEBUG_LED
+    Serial.print(F("Led::Led(idLed, etat, couleur, broche)"));
     Serial.print(F("idLed = "));
     Serial.println(idLed);
     Serial.print(F("etat = "));
@@ -27,8 +30,16 @@ Led::Led(int idLed, bool etat, String couleur, int broche) :
     Serial.print(F("broche = "));
     Serial.println(broche);
 #endif
+    commanderLed();
 }
 
+/**
+ * @brief Constructeur de la classe Led
+ * @fn Led::Led
+ * @param objetJSON Un objet JSON sour forme de String contenant les données
+ * idLed, etat, couleur et broche
+ * @details Initialise un nouvel objet Led
+ */
 Led::Led(String objetJSON)
 {
     StaticJsonDocument<TAILLE_JSON> documentJSON;
@@ -41,7 +52,9 @@ Led::Led(String objetJSON)
     etat    = extraireEtat(documentJSON);
     broche  = extraireNumeroBroche(documentJSON);
     couleur = extraireCouleur(documentJSON);
+    commanderLed();
 #ifdef DEBUG_LED
+    Serial.print(F("Led::Led(objetJSON)"));
     Serial.print(F("idLed = "));
     Serial.println(idLed);
     Serial.print(F("etat = "));
@@ -91,7 +104,12 @@ JsonObject Led::getObjetJSON() const
 
 void Led::setEtat(bool etat)
 {
-    this->etat = etat;
+    // changement d'état
+    if(etat != this->etat)
+    {
+        this->etat = etat;
+        commanderLed();
+    }
 }
 
 void Led::setNumeroBroche(int broche)
@@ -107,19 +125,6 @@ void Led::setCouleur(String couleur)
 void Led::setCouleur(CouleurLed couleur)
 {
     this->couleur = getNomCouleur(couleur);
-}
-
-String getNomCouleur(CouleurLed couleur)
-{
-    switch(couleur)
-    {
-        case ROUGE:
-            return "rouge";
-        case VERTE:
-            return "verte";
-        default:
-            return "";
-    }
 }
 
 /**
@@ -199,4 +204,32 @@ String Led::extraireCouleur(StaticJsonDocument<TAILLE_JSON>& documentJSON)
         return documentJSON["couleur"].as<String>();
     }
     return String();
+}
+
+void Led::commanderLed()
+{
+    digitalWrite(broche, int(etat));
+}
+
+void Led::setObjetJSON(JsonObject& objetJSON) const
+{
+    objetJSON["idLed"]   = getIdLed();
+    objetJSON["etat"]    = getEtat();
+    objetJSON["couleur"] = getCouleur();
+    objetJSON["broche"]  = getNumeroBroche();
+}
+
+String Led::getNomCouleur(CouleurLed couleur)
+{
+    switch(couleur)
+    {
+        case ROUGE:
+            return "rouge";
+        case VERTE:
+            return "verte";
+        case ORANGE:
+            return "orange";
+        default:
+            return "";
+    }
 }

@@ -20,4 +20,10 @@
  */
 #define TAILLE_JSON 256
 
+/**
+ * @def NB_LEDS_MAX
+ * @brief Définit le nombre max de Leds
+ */
+#define NB_LEDS_MAX 8
+
 #endif // SERVEUR_ESP32_H

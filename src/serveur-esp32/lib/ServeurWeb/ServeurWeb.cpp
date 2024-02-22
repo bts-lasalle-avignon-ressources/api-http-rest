@@ -9,10 +9,8 @@
 #include <ESPmDNS.h>
 #include <uri/UriRegex.h>
 
-/*const int    brochesValides[]  = { 4,  5,  13, 14, 18, 19, 21,
-                               22, 23, 25, 26, 27, 32, 33 };*/
 const int    brochesValides[]  = { 4,  5,  13, 14, 16, 17, 18, 19,
-                               21, 22, 23, 25, 26, 27, 32, 33 };
+                                   21, 22, 23, 25, 26, 27, 32, 33 };
 const String couleursValides[] = { "rouge", "verte", "orange" };
 
 /**
@@ -24,9 +22,28 @@ const String couleursValides[] = { "rouge", "verte", "orange" };
  */
 ServeurWeb::ServeurWeb(uint16_t port /*= PORT_SERVEUR_WEB*/) : WebServer(port)
 {
+    // on commence avec deux Leds !
     leds.push_back(new Led(1, false, "rouge", GPIO_LED_ROUGE));
     leds.push_back(
-      new Led("{idLed: 2, etat: false, couleur: 'verte', broche: 16}"));
+      new Led("{idLed: 2, etat: false, couleur: 'verte', broche: " +
+              String(GPIO_LED_VERTE) + "}"));
+
+    // initialise les broches libres
+    for(int i = 0;
+        i <=
+        brochesValides[(sizeof(brochesValides) / sizeof(brochesValides[0])) -
+                       1];
+        ++i)
+    {
+        if(i == 0 || i == GPIO_LED_ROUGE || i == GPIO_LED_VERTE)
+        {
+            brochesDisponibles.push_back(false);
+        }
+        else
+        {
+            brochesDisponibles.push_back(true);
+        }
+    }
 }
 
 /**
@@ -37,6 +54,7 @@ ServeurWeb::ServeurWeb(uint16_t port /*= PORT_SERVEUR_WEB*/) : WebServer(port)
 void ServeurWeb::initialiserPreferences()
 {
     preferences.begin("eeprom", false); // false pour r/w
+    // @todo restaurer les valeurs sauvegardées des Leds
 }
 
 void ServeurWeb::initialiserLeds()
@@ -61,17 +79,15 @@ void ServeurWeb::demarrer()
 {
     initialiserLeds();
     setNom();
-#ifdef DEBUG_SERVEUR_WEB
-    Serial.print(F("ServeurWeb::demarrer() : adresse IP = "));
-    Serial.println(WiFi.localIP());
-#endif
     installerGestionnairesRequetes();
-
-    // Démarre le serveur
-    begin();
+    begin(); // Démarre le serveur
 
 #ifdef DEBUG_SERVEUR_WEB
-    Serial.println(F("ServeurWeb::demarrer() ok"));
+    Serial.print(F("ServeurWeb::demarrer()"));
+    Serial.print(F("Adresse IP = "));
+    Serial.println(WiFi.localIP());
+    Serial.println("URL        = http://" + String(NOM_SERVEUR_WEB) +
+                   ".local/");
 #endif
 }
 
@@ -107,12 +123,6 @@ void ServeurWeb::setNom(String nomServeurWeb)
         Serial.println(F("setNom() Erreur mDNS !"));
 #endif
     }
-    else
-    {
-#ifdef DEBUG_SERVEUR_WEB
-        Serial.println("setNom() http://" + nomServeurWeb + ".local/");
-#endif
-    }
 }
 
 /**
@@ -125,18 +135,19 @@ void ServeurWeb::setNom(String nomServeurWeb)
  */
 void ServeurWeb::installerGestionnairesRequetes()
 {
+    // L'API HTTP REST
     on("/", HTTP_GET, std::bind(&ServeurWeb::afficherAccueil, this));
     on("/leds", HTTP_GET, std::bind(&ServeurWeb::traiterRequeteGetLeds, this));
-    on(UriRegex("/led/([1-3]+)$"),
+    on(UriRegex("/led/([1-" + String(NB_LEDS_MAX) + "]+)$"),
        HTTP_GET,
        std::bind(&ServeurWeb::traiterRequeteGetLed, this));
-    on(UriRegex("/led/([1-3]+)$"),
+    on(UriRegex("/led/([1-" + String(NB_LEDS_MAX) + "]+)$"),
        HTTP_POST,
        std::bind(&ServeurWeb::traiterRequeteUpdateLedWithForm, this));
-    on(UriRegex("/led/([1-3]+)$"),
+    on(UriRegex("/led/([1-" + String(NB_LEDS_MAX) + "]+)$"),
        HTTP_PUT,
        std::bind(&ServeurWeb::traiterRequeteUpdateLed, this));
-    on(UriRegex("/led/([1-3]+)$"),
+    on(UriRegex("/led/([1-" + String(NB_LEDS_MAX) + "]+)$"),
        HTTP_DELETE,
        std::bind(&ServeurWeb::traiterRequeteDeleteLed, this));
     on("/led", HTTP_POST, std::bind(&ServeurWeb::traiterRequeteAddLed, this));
@@ -144,7 +155,7 @@ void ServeurWeb::installerGestionnairesRequetes()
 }
 
 /**
- * @brief Affiche la page d'accueil du serveur web
+ * @brief Affiche une page d'accueil pour le serveur web
  * @fn ServeurWeb::afficherAccueil
  * @details Affiche la page d'accueil du serveur web. La méthode utilise
  la fonction send() pour envoyer la réponse au client HTTP avec un code de
@@ -154,12 +165,17 @@ void ServeurWeb::afficherAccueil()
 {
 #ifdef DEBUG_SERVEUR_WEB
     Serial.print(F("ServeurWeb::afficherAccueil() : requête = "));
-    Serial.println((method() == HTTP_GET) ? "GET" : "POST");
+    Serial.println((method() == HTTP_GET) ? "GET" : "Autre");
     Serial.print(F("URI : "));
     Serial.println(uri());
 #endif
     String message = "<h1>Bienvenue sur le serveur HTTP REST</h1>\n";
     message += "<p>Adresse IP : " + WiFi.localIP().toString() + "</p>\n";
+    message +=
+      "<p>URL        : http://" + String(NOM_SERVEUR_WEB) + ".local/</p>\n";
+    message +=
+      "<p>Leds       : http://" + String(NOM_SERVEUR_WEB) + ".local/leds</p>\n";
+    message += "<p>...</p>\n";
     message += "<p>LaSalle Avignon v1.0</p>\n";
     send(200, F("text/html"), message);
 }
@@ -176,7 +192,7 @@ void ServeurWeb::traiterRequeteGetLeds()
     Serial.print(F("URI : "));
     Serial.println(uri());
 #endif
-    /*
+    /*  Exemple de réponse :
         [
             {
                 "idLed": 1,
@@ -200,20 +216,18 @@ void ServeurWeb::traiterRequeteGetLeds()
             continue;
         }
         JsonObject objetLed = documentJSON.createNestedObject();
-        objetLed["idLed"]   = leds[i]->getIdLed();
-        objetLed["etat"]    = leds[i]->getEtat();
-        objetLed["couleur"] = leds[i]->getCouleur();
-        objetLed["broche"]  = leds[i]->getNumeroBroche();
+        leds[i]->setObjetJSON(objetLed);
     }
+
+    char buffer[TAILLE_JSON];
+    serializeJson(documentJSON, buffer);
+    send(200, "application/json", buffer);
 
 #ifdef DEBUG_SERVEUR_WEB
     Serial.print(F("JSON : "));
     serializeJson(documentJSON, Serial);
     Serial.println();
 #endif
-    char buffer[TAILLE_JSON];
-    serializeJson(documentJSON, buffer);
-    send(200, "application/json", buffer);
 }
 
 /**
@@ -227,41 +241,31 @@ void ServeurWeb::traiterRequeteGetLed()
     Serial.println((method() == HTTP_GET) ? "GET" : "Autre");
     Serial.print(F("URI : "));
     Serial.println(uri());
-    Serial.print(F("idLed : "));
+    Serial.print(F("{idLed} : "));
     Serial.println(uri().substring(uri().lastIndexOf('/') + 1).toInt());
 #endif
 
-    int idLed = uri().substring(uri().lastIndexOf('/') + 1).toInt();
-    if(idLed < 1 || idLed > leds.size())
+    if(estRequeteGetLedPossible())
     {
-        traiterRequeteNonTrouvee();
-        return;
-    }
-    if(leds[idLed - 1] == nullptr)
-    {
-        traiterRequeteNonTrouvee();
-        return;
-    }
+        documentJSON.clear();
+        JsonObject objetLed = documentJSON.createNestedObject();
+        int        idLed = uri().substring(uri().lastIndexOf('/') + 1).toInt();
+        leds[idLed - 1]->setObjetJSON(objetLed);
 
-    documentJSON.clear();
-    JsonObject objetLed = documentJSON.createNestedObject();
-    objetLed["idLed"]   = leds[idLed - 1]->getIdLed();
-    objetLed["etat"]    = leds[idLed - 1]->getEtat();
-    objetLed["couleur"] = leds[idLed - 1]->getCouleur();
-    objetLed["broche"]  = leds[idLed - 1]->getNumeroBroche();
+        char buffer[TAILLE_JSON];
+        serializeJson(documentJSON, buffer);
+        send(200, "application/json", buffer);
 
 #ifdef DEBUG_SERVEUR_WEB
-    Serial.print(F("JSON : "));
-    serializeJson(documentJSON, Serial);
-    Serial.println();
+        Serial.print(F("JSON : "));
+        serializeJson(documentJSON, Serial);
+        Serial.println();
 #endif
-    char buffer[TAILLE_JSON];
-    serializeJson(documentJSON, buffer);
-    send(200, "application/json", buffer);
+    }
 }
 
 /**
- * @brief Traite la requête POST d'une Led
+ * @brief Traite la requête POST pour mettre à jour une Led
  * @fn ServeurWeb::traiterRequeteUpdateLedWithForm
  */
 void ServeurWeb::traiterRequeteUpdateLedWithForm()
@@ -272,72 +276,39 @@ void ServeurWeb::traiterRequeteUpdateLedWithForm()
     Serial.println((method() == HTTP_POST) ? "POST" : "Autre");
     Serial.print(F("URI : "));
     Serial.println(uri());
-    Serial.print(F("idLed : "));
+    Serial.print(F("{idLed} : "));
     Serial.println(uri().substring(uri().lastIndexOf('/') + 1).toInt());
-    Serial.print(F("plain : "));
+    Serial.print(F("Body : "));
     Serial.println(arg("plain"));
 #endif
 
-    if(hasArg("plain") == false)
+    if(estRequeteUpdateLedWithFormPossible())
     {
-#ifdef DEBUG_SERVEUR_WEB
-        Serial.println(F("Erreur !"));
-#endif
-        send(400,
-             "application/json",
-             "{\"code\": 1,\"message\": \"La demande est incomplète\"}");
-        return;
-    }
+        int idLed = extraireIdLed();
+        leds[idLed - 1]->setCouleur(extraireCouleur());
+        brochesDisponibles[leds[idLed - 1]->getNumeroBroche()] = true;
+        leds[idLed - 1]->setNumeroBroche(extraireNumeroBroche());
+        brochesDisponibles[extraireNumeroBroche()] = false;
+        leds[idLed - 1]->setEtat(extraireEtat());
 
-    String body = arg("plain");
-#ifdef DEBUG_SERVEUR_WEB
-    Serial.println(body);
-#endif
-    DeserializationError erreur = deserializeJson(documentJSON, body);
-    if(erreur)
-    {
-#ifdef DEBUG_SERVEUR_WEB
-        Serial.print(F("Erreur deserializeJson() : "));
-        Serial.println(erreur.f_str());
-#endif
-        send(400,
-             "application/json",
-             "{\"code\": 2,\"message\": \"La demande est invalide\"}");
-        return;
-    }
-    else
-    {
-        if(estRequeteUpdateLedWithFormPossible())
-        {
-            int idLed = extraireIdLed();
+        documentJSON.clear();
+        JsonObject objetLed = documentJSON.createNestedObject();
+        leds[idLed - 1]->setObjetJSON(objetLed);
 
-            commanderLed(extraireNumeroBroche(), extraireEtat());
-
-            leds[idLed - 1]->setEtat(extraireEtat());
-            leds[idLed - 1]->setCouleur(extraireCouleur());
-            leds[idLed - 1]->setNumeroBroche(extraireNumeroBroche());
-
-            documentJSON.clear();
-            JsonObject objetLed = documentJSON.createNestedObject();
-            objetLed["idLed"]   = leds[idLed - 1]->getIdLed();
-            objetLed["etat"]    = leds[idLed - 1]->getEtat();
-            objetLed["couleur"] = leds[idLed - 1]->getCouleur();
-            objetLed["broche"]  = leds[idLed - 1]->getNumeroBroche();
+        char buffer[TAILLE_JSON];
+        serializeJson(documentJSON, buffer);
+        send(200, "application/json", buffer);
 
 #ifdef DEBUG_SERVEUR_WEB
-            Serial.print(F("JSON : "));
-            serializeJson(documentJSON, Serial);
-            Serial.println();
+        Serial.print(F("JSON : "));
+        serializeJson(documentJSON, Serial);
+        Serial.println();
 #endif
-            char buffer[TAILLE_JSON];
-            serializeJson(documentJSON, buffer);
-            send(200, "application/json", buffer);
-        }
     }
 }
 
 /**
- * @brief Traite la requête PUT pour modifier l'état d'une Led
+ * @brief Traite la requête PUT pour modifier une Led
  * @fn ServeurWeb::traiterRequeteUpdateLed
  */
 void ServeurWeb::traiterRequeteUpdateLed()
@@ -347,61 +318,39 @@ void ServeurWeb::traiterRequeteUpdateLed()
     Serial.println((method() == HTTP_PUT) ? "PUT" : "Autre");
     Serial.print(F("URI : "));
     Serial.println(uri());
-    Serial.print(F("idLed (URI) : "));
+    Serial.print(F("{idLed} : "));
     Serial.println(uri().substring(uri().lastIndexOf('/') + 1).toInt());
-    Serial.print(F("idLed (Params) : "));
-    Serial.println(arg("idLed"));
 #endif
-
-    if(hasArg("idLed") == false)
-    {
-#ifdef DEBUG_SERVEUR_WEB
-        Serial.println(F("Erreur !"));
-#endif
-        send(400,
-             "application/json",
-             "{\"code\": 1,\"message\": \"La demande est incomplète\"}");
-        return;
-    }
 
     if(estRequeteUpdateLedPossible())
     {
-        int idLed = arg("idLed").toInt();
-
-        bool etat = (arg("etat") == "1") || (arg("etat") == "true");
-
-        commanderLed(arg("broche").toInt(), etat);
-
-        leds[idLed - 1]->setEtat(etat);
+        int  idLed = arg("idLed").toInt();
+        bool etat  = (arg("etat") == "1") || (arg("etat") == "true");
         leds[idLed - 1]->setCouleur(arg("couleur"));
+        brochesDisponibles[leds[idLed - 1]->getNumeroBroche()] = true;
         leds[idLed - 1]->setNumeroBroche(arg("broche").toInt());
+        brochesDisponibles[arg("broche").toInt()] = false;
+        leds[idLed - 1]->setEtat(etat);
 
         documentJSON.clear();
         JsonObject objetLed = documentJSON.createNestedObject();
-        objetLed["idLed"]   = leds[idLed - 1]->getIdLed();
-        objetLed["etat"]    = leds[idLed - 1]->getEtat();
-        objetLed["couleur"] = leds[idLed - 1]->getCouleur();
-        objetLed["broche"]  = leds[idLed - 1]->getNumeroBroche();
+        leds[idLed - 1]->setObjetJSON(objetLed);
+
+        char buffer[TAILLE_JSON];
+        serializeJson(documentJSON, buffer);
+        send(200, "application/json", buffer);
 
 #ifdef DEBUG_SERVEUR_WEB
         Serial.print(F("JSON : "));
         serializeJson(documentJSON, Serial);
         Serial.println();
 #endif
-        char buffer[TAILLE_JSON];
-        serializeJson(documentJSON, buffer);
-        send(200, "application/json", buffer);
     }
 }
 
 /**
  * @brief Traite la requête DELETE pour supprimer une Led
  * @fn ServeurWeb::traiterRequeteDeleteLed
- * @details Récupère la demande POST de la poubelle envoyée par le client et
- vérifie si elle est correcte. Ensuite, détermine l'état de la poubelle et
- l'enregistre dans l'objet StationLumineuse. Si la demande est correcte, envoie
- une réponse JSON de confirmation au client. Si la demande est incomplète,
- envoie une réponse JSON d'erreur correspondante au client.
  */
 void ServeurWeb::traiterRequeteDeleteLed()
 {
@@ -410,19 +359,26 @@ void ServeurWeb::traiterRequeteDeleteLed()
     Serial.println((method() == HTTP_DELETE) ? "DELETE" : "Autre");
     Serial.print(F("URI : "));
     Serial.println(uri());
-    Serial.print(F("idLed : "));
+    Serial.print(F("{idLed} : "));
     Serial.println(uri().substring(uri().lastIndexOf('/') + 1).toInt());
 #endif
 
     if(estRequeteDeleteLedPossible())
     {
         int idLed = uri().substring(uri().lastIndexOf('/') + 1).toInt();
-        commanderLed(leds[idLed - 1]->getNumeroBroche(), false);
+        leds[idLed - 1]->setEtat(false);
+        brochesDisponibles[leds[idLed - 1]->getNumeroBroche()] = true;
         delete leds[idLed - 1];
         leds[idLed - 1] = nullptr;
     }
+
+    // Pas de réponse pour cette requête
 }
 
+/**
+ * @brief Traite la requête POST pour ajouter une Led
+ * @fn ServeurWeb::traiterRequeteAddLed
+ */
 void ServeurWeb::traiterRequeteAddLed()
 {
 #ifdef DEBUG_SERVEUR_WEB
@@ -430,79 +386,45 @@ void ServeurWeb::traiterRequeteAddLed()
     Serial.println((method() == HTTP_POST) ? "POST" : "Autre");
     Serial.print(F("URI : "));
     Serial.println(uri());
-    Serial.print(F("plain : "));
+    Serial.print(F("Body : "));
     Serial.println(arg("plain"));
 #endif
-    if(hasArg("plain") == false)
-    {
-#ifdef DEBUG_SERVEUR_WEB
-        Serial.println(F("Erreur !"));
-#endif
-        send(400,
-             "application/json",
-             "{\"code\": 1,\"message\": \"La demande est incomplète\"}");
-        return;
-    }
 
-    String body = arg("plain");
-#ifdef DEBUG_SERVEUR_WEB
-    Serial.println(body);
-#endif
-    DeserializationError erreur = deserializeJson(documentJSON, body);
-    if(erreur)
-    {
-#ifdef DEBUG_SERVEUR_WEB
-        Serial.print(F("Erreur deserializeJson() : "));
-        Serial.println(erreur.f_str());
-#endif
-        send(400,
-             "application/json",
-             "{\"code\": 2,\"message\": \"La demande est invalide\"}");
-        return;
-    }
-    else
-    {
-        /*
-            {
-                "couleur": "rouge",
-                "broche": 27
-            }
-        */
-
-        if(estAjoutPossible())
+    /*  Exemple de données reçues :
         {
-            int idLed = leds.size() + 1;
+            "couleur": "rouge",
+            "broche": 27
+        }
+    */
 
-            commanderLed(extraireNumeroBroche(), false);
+    if(estAjoutPossible())
+    {
+        int idLed = leds.size() + 1;
 
-            leds.push_back(
-              new Led(idLed, false, extraireCouleur(), extraireNumeroBroche()));
+        // instancie la nouvelle Led
+        leds.push_back(
+          new Led(idLed, false, extraireCouleur(), extraireNumeroBroche()));
+        brochesDisponibles[extraireNumeroBroche()] = false;
 
-            documentJSON.clear();
-            JsonObject objetLed = documentJSON.createNestedObject();
-            objetLed["idLed"]   = leds[idLed - 1]->getIdLed();
-            objetLed["etat"]    = leds[idLed - 1]->getEtat();
-            objetLed["couleur"] = leds[idLed - 1]->getCouleur();
-            objetLed["broche"]  = leds[idLed - 1]->getNumeroBroche();
+        documentJSON.clear();
+        JsonObject objetLed = documentJSON.createNestedObject();
+        leds[idLed - 1]->setObjetJSON(objetLed);
+
+        char buffer[TAILLE_JSON];
+        serializeJson(documentJSON, buffer);
+        send(200, "application/json", buffer);
 
 #ifdef DEBUG_SERVEUR_WEB
-            Serial.print(F("JSON : "));
-            serializeJson(documentJSON, Serial);
-            Serial.println();
+        Serial.print(F("JSON : "));
+        serializeJson(documentJSON, Serial);
+        Serial.println();
 #endif
-            char buffer[TAILLE_JSON];
-            serializeJson(documentJSON, buffer);
-            send(200, "application/json", buffer);
-        }
     }
 }
 
 /**
  * @brief Traite une requête qui n'a pas été trouvée
  * @fn ServeurWeb::traiterRequeteNonTrouvee
- * @details Récupère les informations de la requête (URI, méthode,
- arguments) et les concatène dans un message d'erreur de type 404. Envoie
- ensuite ce message au client qui a effectué la requête.
  */
 void ServeurWeb::traiterRequeteNonTrouvee()
 {
@@ -512,8 +434,13 @@ void ServeurWeb::traiterRequeteNonTrouvee()
     Serial.println(uri());
 #endif
 
-    String message = "404 Led non trouvée\n\n";
+    String message = "404 Led non trouvée\r\n";
     send(404, "text/plain", message);
+
+#ifdef DEBUG_SERVEUR_WEB
+    Serial.print(F("text/plain : "));
+    Serial.println(message);
+#endif
 }
 
 /**
@@ -634,8 +561,56 @@ bool ServeurWeb::estBrocheValide(int broche) const
     return false;
 }
 
+bool ServeurWeb::estBrocheDisponible(int broche) const
+{
+    return brochesDisponibles[broche];
+}
+
+bool ServeurWeb::estRequeteGetLedPossible()
+{
+    int idLed = uri().substring(uri().lastIndexOf('/') + 1).toInt();
+    if(idLed < 1 || idLed > leds.size())
+    {
+        traiterRequeteNonTrouvee();
+        return false;
+    }
+    if(leds[idLed - 1] == nullptr)
+    {
+        traiterRequeteNonTrouvee();
+        return false;
+    }
+    return true;
+}
+
 bool ServeurWeb::estRequeteUpdateLedWithFormPossible()
 {
+    if(hasArg("plain") == false)
+    {
+#ifdef DEBUG_SERVEUR_WEB
+        Serial.println(F("Erreur !"));
+#endif
+        send(400,
+             "application/json",
+             "{\"code\": 1,\"message\": \"La demande est incomplète\"}");
+        return false;
+    }
+
+    String body = arg("plain");
+#ifdef DEBUG_SERVEUR_WEB
+    Serial.println(body);
+#endif
+    DeserializationError erreur = deserializeJson(documentJSON, body);
+    if(erreur)
+    {
+#ifdef DEBUG_SERVEUR_WEB
+        Serial.print(F("Erreur deserializeJson() : "));
+        Serial.println(erreur.f_str());
+#endif
+        send(400,
+             "application/json",
+             "{\"code\": 2,\"message\": \"La demande est invalide\"}");
+        return false;
+    }
     int idLed = extraireIdLed();
     if(idLed == -1)
     {
@@ -673,11 +648,28 @@ bool ServeurWeb::estRequeteUpdateLedWithFormPossible()
              "{\"code\": 2,\"message\": \"La demande est invalide\"}");
         return false;
     }
+    if(!estBrocheDisponible(extraireNumeroBroche()))
+    {
+        send(400,
+             "application/json",
+             "{\"code\": 2,\"message\": \"La demande est invalide\"}");
+        return false;
+    }
     return true;
 }
 
 bool ServeurWeb::estRequeteUpdateLedPossible()
 {
+    if(hasArg("idLed") == false)
+    {
+#ifdef DEBUG_SERVEUR_WEB
+        Serial.println(F("Erreur !"));
+#endif
+        send(400,
+             "application/json",
+             "{\"code\": 1,\"message\": \"La demande est incomplète\"}");
+        return false;
+    }
     int idLed = arg("idLed").toInt();
     if(idLed == -1)
     {
@@ -686,7 +678,7 @@ bool ServeurWeb::estRequeteUpdateLedPossible()
              "{\"code\": 2,\"message\": \"La demande est invalide\"}");
         return false;
     }
-    else if(idLed > NB_LEDS ||
+    else if(idLed > leds.size() ||
             idLed != uri().substring(uri().lastIndexOf('/') + 1).toInt())
     {
         send(400,
@@ -709,6 +701,13 @@ bool ServeurWeb::estRequeteUpdateLedPossible()
         return false;
     }
     if(!estBrocheValide(arg("broche").toInt()))
+    {
+        send(400,
+             "application/json",
+             "{\"code\": 2,\"message\": \"La demande est invalide\"}");
+        return false;
+    }
+    if(!estBrocheDisponible(arg("broche").toInt()))
     {
         send(400,
              "application/json",
@@ -741,6 +740,32 @@ bool ServeurWeb::estRequeteDeleteLedPossible()
 
 bool ServeurWeb::estAjoutPossible()
 {
+    if(hasArg("plain") == false)
+    {
+#ifdef DEBUG_SERVEUR_WEB
+        Serial.println(F("Erreur !"));
+#endif
+        send(400,
+             "application/json",
+             "{\"code\": 1,\"message\": \"La demande est incomplète\"}");
+        return false;
+    }
+    String body = arg("plain");
+#ifdef DEBUG_SERVEUR_WEB
+    Serial.println(body);
+#endif
+    DeserializationError erreur = deserializeJson(documentJSON, body);
+    if(erreur)
+    {
+#ifdef DEBUG_SERVEUR_WEB
+        Serial.print(F("Erreur deserializeJson() : "));
+        Serial.println(erreur.f_str());
+#endif
+        send(400,
+             "application/json",
+             "{\"code\": 2,\"message\": \"La demande est invalide\"}");
+        return false;
+    }
     if(extraireCouleur().isEmpty() || extraireNumeroBroche() == -1)
     {
         send(400,
@@ -762,10 +787,14 @@ bool ServeurWeb::estAjoutPossible()
              "{\"code\": 2,\"message\": \"La demande est invalide\"}");
         return false;
     }
+    if(!estBrocheDisponible(extraireNumeroBroche()))
+    {
+        send(400,
+             "application/json",
+             "{\"code\": 2,\"message\": \"La demande est invalide\"}");
+        return false;
+    }
+    if(leds.size() >= NB_LEDS_MAX)
+        return false;
     return true;
-}
-
-void ServeurWeb::commanderLed(int broche, bool etat)
-{
-    digitalWrite(broche, int(etat));
 }

@@ -5,27 +5,17 @@
  * @version 0.1
  */
 
-#define ERREUR_BROWNOUT
-
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include "ServeurWeb.h"
-#ifdef ERREUR_BROWNOUT
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
-#endif
 
 WiFiManager wm;
 WiFiClient  espClient;
-ServeurWeb  serveurWeb;
+ServeurWeb  serveurWeb; // par défaut sur le port 80
 
 void setup()
 {
-#ifdef ERREUR_BROWNOUT
-    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
-#endif
-
     Serial.begin(115200);
     Serial.println(F("Serveur web HTTP Rest"));
 
