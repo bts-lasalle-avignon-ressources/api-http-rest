@@ -10,7 +10,7 @@
 #include <uri/UriRegex.h>
 
 const int    brochesValides[]  = { 4,  5,  13, 14, 16, 17, 18, 19,
-                                   21, 22, 23, 25, 26, 27, 32, 33 };
+                               21, 22, 23, 25, 26, 27, 32, 33 };
 const String couleursValides[] = { "rouge", "verte", "orange" };
 
 /**
@@ -83,7 +83,7 @@ void ServeurWeb::demarrer()
     begin(); // Démarre le serveur
 
 #ifdef DEBUG_SERVEUR_WEB
-    Serial.print(F("ServeurWeb::demarrer()"));
+    Serial.println(F("ServeurWeb::demarrer()"));
     Serial.print(F("Adresse IP = "));
     Serial.println(WiFi.localIP());
     Serial.println("URL        = http://" + String(NOM_SERVEUR_WEB) +
@@ -648,12 +648,15 @@ bool ServeurWeb::estRequeteUpdateLedWithFormPossible()
              "{\"code\": 2,\"message\": \"La demande est invalide\"}");
         return false;
     }
-    if(!estBrocheDisponible(extraireNumeroBroche()))
+    if(leds[idLed - 1]->changementBroche(extraireNumeroBroche()))
     {
-        send(400,
-             "application/json",
-             "{\"code\": 2,\"message\": \"La demande est invalide\"}");
-        return false;
+        if(!estBrocheDisponible(extraireNumeroBroche()))
+        {
+            send(400,
+                 "application/json",
+                 "{\"code\": 2,\"message\": \"La demande est invalide\"}");
+            return false;
+        }
     }
     return true;
 }
@@ -707,12 +710,15 @@ bool ServeurWeb::estRequeteUpdateLedPossible()
              "{\"code\": 2,\"message\": \"La demande est invalide\"}");
         return false;
     }
-    if(!estBrocheDisponible(arg("broche").toInt()))
+    if(leds[idLed - 1]->changementBroche(arg("broche").toInt()))
     {
-        send(400,
-             "application/json",
-             "{\"code\": 2,\"message\": \"La demande est invalide\"}");
-        return false;
+        if(!estBrocheDisponible(arg("broche").toInt()))
+        {
+            send(400,
+                 "application/json",
+                 "{\"code\": 2,\"message\": \"La demande est invalide\"}");
+            return false;
+        }
     }
     return true;
 }
