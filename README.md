@@ -15,16 +15,20 @@
   - [OpenAPI](#openapi)
     - [Exemple pour un IoT ESP32](#exemple-pour-un-iot-esp32)
     - [SwaggerHub](#swaggerhub)
+  - [Générateur](#générateur)
+    - [Swagger Editor](#swagger-editor)
+    - [Postman](#postman)
+    - [OpenAPI Generator](#openapi-generator)
+    - [SwaggerHub](#swaggerhub-1)
+    - [Swagger Codegen](#swagger-codegen)
   - [Application serveur HTTP](#application-serveur-http)
-    - [Générateur](#générateur)
     - [ESP32](#esp32)
       - [Code source](#code-source)
         - [CLI (`curl`)](#cli-curl)
-        - [Postman](#postman)
+        - [Postman](#postman-1)
     - [Python](#python)
     - [Node.js](#nodejs)
   - [Application cliente HTTP](#application-cliente-http)
-    - [Générateur](#générateur-1)
     - [Android Java](#android-java)
     - [Qt C++](#qt-c)
     - [Python](#python-1)
@@ -350,6 +354,17 @@ On obtiendra une réponse en JSON de ce type :
 
 > La spécification complète : [specifications/openapi-v1.yaml](./specifications/openapi-v1.yaml)
 
+En résumé :
+
+| Requête HTTP            | Description                        |
+|:-----------------------:|:----------------------------------:|
+| **GET** /leds           | Lister les leds                    |
+| **POST** /led           | Ajouter une Led                    |
+| **DELETE** /led/{idLed} | Supprimer une Led                  |
+| **GET** /led/{idLed}    | Obtenir les détails d&#x27;une Led |
+| **PUT** /led/{idLed}    | Mettre à jour une Led              |
+| **POST** /led/{idLed}   | Mettre à jour une Led              |
+
 Avec l'[éditeur en ligne](http://editor.swagger.io/) : http://editor.swagger.io/.
 
 ![](./images/openapi-operations.png)
@@ -395,16 +410,96 @@ $ curl -k --location https://virtserver.swaggerhub.com/TVAIRA/ESP32/1.0/led/1
 }
 ```
 
-## Application serveur HTTP
+## Générateur
 
-### Générateur
+Il existe de nombreux outils qui permettent la génération automatique (dans de très nombreux langages et _frameworks_) de bibliothèques clientes d'API HTTP, de _stubs_ de serveur et de documentation.
 
-Il est possible de générer le code du serveur :
+### Swagger Editor
 
-- http://swagger.io/swagger-codegen/
-- directement dans [Swagger Editor](http://swagger.io/swagger-ui/)
+Il est possible de générer le code du client directement dans [Swagger Editor](http://swagger.io/swagger-ui/) :
 
 ![](./images/generate-server.png)
+
+![](./images/generate-client.png)
+
+### Postman
+
+Des utilitaires comme [Postman](https://www.postman.com/) fournissent des extraits de code à réutiliser :
+
+![](./images/postman-code-snippet.png)
+
+Par exemple pour Java :
+
+![](./images/postman-code-snippet-java.png)
+
+### OpenAPI Generator
+
+Il existe aussi [OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator-cli) qui permet la génération de bibliothèques clientes d'API HTTP avec une spécification [OpenAPI](https://swagger.io/specification/).
+
+Liens :
+
+- https://github.com/OpenAPITools/openapi-generator-cli
+- https://openapi-generator.tech/docs/installation/
+
+Installation :
+
+```bash
+$ npm install -g @openapitools/openapi-generator-cli
+
+npx openapi-generator-cli version
+Did set selected version to 7.1.0
+7.1.0
+```
+
+Génération de code Python :
+
+```bash
+$ npx @openapitools/openapi-generator-cli generate -g python -i https://api.redocly.com/registry/bundle/openhue/openhue/v2/openapi.yaml -o my-openhue-project
+```
+
+### SwaggerHub
+
+La plateforme [SwaggerHub](https://swagger.io/tools/swaggerhub/) permet un accès au générateur Codegen qui permet de générer du code automatiquement :
+
+![](./images/codegen-client.png)
+
+![](./images/codegen-serveur.png)
+
+### Swagger Codegen
+
+[Swagger Codegen](https://github.com/swagger-api/swagger-codegen/) est aussi un générateur qui permet la génération automatique (dans de très nombreux langages et _frameworks_) de bibliothèques clientes d'API HTTP, de _stubs_ de serveur et de documentation.
+
+Sans installation :
+
+```bash
+$ wget https://repo1.maven.org/maven2/io/swagger/codegen/v3/swagger-codegen-cli/3.0.52/swagger-codegen-cli-3.0.52.jar -O swagger-codegen-cli.jar
+
+$ java -jar swagger-codegen-cli.jar --help
+```
+
+Par exemple, pour générer un client en Python :
+
+```bash
+$ java -jar swagger-codegen-cli.jar generate -i ./specifications/openapi-v1.yaml -l python -o /var/tmp/test/
+```
+
+Installation :
+
+```bash
+$ git clone https://github.com/swagger-api/swagger-codegen
+$ cd swagger-codegen/
+$ ./mvn clean package
+```
+
+Par exemple, pour générer un client en Python :
+
+```bash
+$ java -jar modules/swagger-codegen-cli/target/swagger-codegen-cli.jar generate -i ./specifications/openapi-v1.yaml -l python -o /var/tmp/test/
+```
+
+> Des scripts sont fournis dans [bin/](https://github.com/swagger-api/swagger-codegen/tree/master/bin) pour de très nombreux langages et platefromes.
+
+## Application serveur HTTP
 
 ### ESP32
 
@@ -752,43 +847,6 @@ Tutoriel : https://node-js.fr/express/rest.html
 ## Application cliente HTTP
 
 Pour faire simple, cela revient à émettre des requêtes HTTP et le plus souvent à traiter du JSON ou du XML.
-
-### Générateur
-
-Il est possible de générer le code du client directement dans [Swagger Editor](http://swagger.io/swagger-ui/).
-
-![](./images/generate-client.png)
-
-Des utilitaires comme [Postman](https://www.postman.com/) fournissent des extraits de code à réutiliser :
-
-![](./images/postman-code-snippet.png)
-
-Par exemple pour Java :
-
-![](./images/postman-code-snippet-java.png)
-
-Il existe aussi [OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator-cli) qui permet la génération de bibliothèques clientes d'API HTTP avec une spécification [OpenAPI](https://swagger.io/specification/).
-
-Liens :
-
-- https://github.com/OpenAPITools/openapi-generator-cli
-- https://openapi-generator.tech/docs/installation/
-
-Instalation :
-
-```bash
-$ npm install -g @openapitools/openapi-generator-cli
-
-npx openapi-generator-cli version
-Did set selected version to 7.1.0
-7.1.0
-```
-
-Génération de code Python :
-
-```bash
-$ npx @openapitools/openapi-generator-cli generate -g python -i https://api.redocly.com/registry/bundle/openhue/openhue/v2/openapi.yaml -o my-openhue-project
-```
 
 ### Android Java
 
