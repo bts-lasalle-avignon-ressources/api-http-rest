@@ -770,7 +770,7 @@ bool ServeurWeb::estAjoutPossible()
     {
         send(400,
              "application/json",
-             "{\"code\": 3,\"message\": \"La demande est invalide\"}");
+             "{\"code\": 2,\"message\": \"La demande est invalide\"}");
         return false;
     }
     if(!estCouleurValide(extraireCouleur()))

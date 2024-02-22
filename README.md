@@ -18,6 +18,7 @@
   - [Application serveur HTTP](#application-serveur-http)
     - [Générateur](#générateur)
     - [ESP32](#esp32)
+      - [Code source](#code-source)
         - [CLI (`curl`)](#cli-curl)
         - [Postman](#postman)
     - [Python](#python)
@@ -192,19 +193,23 @@ Il est possible d'écrire la spécification de l'API en [JSON](https://fr.wikipe
 
 Pour cela, on peut utiliser l'[éditeur en ligne](http://editor.swagger.io/) : http://editor.swagger.io/.
 
-> [Swagger Editor](http://swagger.io/swagger-ui/) peut être utilisé en local sur la machine : https://swagger.io/docs/open-source-tools/swagger-editor/
+> [Swagger UI](http://swagger.io/swagger-ui/) peut être utilisé en local sur la machine : https://swagger.io/docs/open-source-tools/swagger-editor/
 
 La structure de base du fichier possède notamment les propriétés suivantes :
 
 - `openapi` : indique la version des spécifications utilisées
-- `servers` : définit les paramètres, comme l'[URL](https://fr.wikipedia.org/wiki/Uniform_Resource_Locator) de base, du (ou des) serveur(s)
 - `info` : décrit des informations (métadonnées) sur l'API
+- `servers` : définit les paramètres, comme l'[URL](https://fr.wikipedia.org/wiki/Uniform_Resource_Locator) de base, du (ou des) serveur(s)
 - `paths` : définit les [URL](https://fr.wikipedia.org/wiki/Uniform_Resource_Locator)s et les opérations de l'API (`get`, `post`, ...)
 - `components` : contient un ensemble d’objets réutilisables et explicitement référencés à partir des propriétés définies dans `paths`
 
 ### Exemple pour un IoT ESP32
 
-cf. [specifications/openapi-v1.yaml](./specifications/openapi-v1.yaml)
+L'exemple de base présenté ici tourne autour d'un [ESP32](https://fr.wikipedia.org/wiki/ESP32). On souhaite définir une API REST pour gérer des Leds rouges et vertes reliées sur les broches [GPIO](https://fr.wikipedia.org/wiki/General_Purpose_Input/Output).
+
+> La spécification complète : [specifications/openapi-v1.yaml](./specifications/openapi-v1.yaml)
+
+On commence par définir les propriétés `openapi` et `info` :
 
 ```yaml
 openapi: 3.0.3
@@ -219,6 +224,12 @@ info:
   license:
     name: Apache 2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
+```
+
+Puis, on définit 3 serveurs dans la propriété `servers` :
+
+```yaml
+...
 servers:
   - url: http://{adresseIPESP32}
     description: L'IoT ESP32
@@ -228,13 +239,17 @@ servers:
         description: |
           Aller sur http://iot-esp32.local/
   - url: http://localhost:5000
+    description: Test en Python et Node.js
   - url: https://virtserver.swaggerhub.com/TVAIRA/ESP32/1.0
     description: SwaggerHub API Auto Mocking
-tags:
-  - name: leds
-    description: Les leds de l'ESP32
-  - name: led
-    description: Toutes les opérations sur une Led de l'ESP32
+```
+
+L'API est ensuite documentée avec les propriétés `paths` et `components` :
+
+- pour une rquête `GET` sur `/leds` :
+
+```yaml
+...
 paths:
   /leds:
     get:
@@ -250,168 +265,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/getLeds"
-  /led/{idLed}:
-    parameters:
-      - name: idLed
-        in: path
-        description: ID de la led
-        required: true
-        schema:
-          type: integer
-          format: int32
-    get:
-      summary: Obtenir les détails d'une Led
-      description: Obtenir les détails d'une seule Led `{idLed}`
-      operationId: getLed
-      tags:
-        - led
-      responses:
-        "200":
-          description: Succès
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Led"
-              examples:
-                LedRouge:
-                  value:
-                    idLed: 1
-                    etat: false
-                    couleur: "rouge"
-                    broche: 5
-                LedVerte:
-                  value:
-                    idLed: 2
-                    etat: true
-                    couleur: "verte"
-                    broche: 16
-        "404":
-          description: Led non trouvée
-    put:
-      summary: Mettre à jour une Led
-      description: Mettre à jour les informations d'une Led `{idLed}`
-      operationId: updateLed
-      tags:
-        - led
-      requestBody:
-        description: Met à jour les informations d'une Led
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Led"
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: "#/components/schemas/Led"
-        required: true
-      responses:
-        "200":
-          description: Succès de l'opération
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Led"
-        "400":
-          description: Opération invalide
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Erreur"
-              examples:
-                DemandeIncomplete:
-                  value:
-                    code: 1
-                    message: "La demande est incomplète"
-                DemandeInvalide:
-                  value:
-                    code: 2
-                    message: "La demande est invalide"
-    post:
-      summary: Mettre à jour une Led
-      description: Mettre à jour les informations d'une Led `{idLed}`
-      operationId: updateLedWithForm
-      tags:
-        - led
-      requestBody:
-        description: Met à jour les informations d'une Led
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Led"
-        required: true
-      responses:
-        "400":
-          description: Opération invalide
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Erreur"
-              examples:
-                DemandeIncomplete:
-                  value:
-                    code: 1
-                    message: "La demande est incomplète"
-                DemandeInvalide:
-                  value:
-                    code: 2
-                    message: "La demande est invalide"
-    delete:
-      summary: Supprimer une Led
-      description: Supprimer une Led `{idLed}`
-      operationId: deleteLed
-      tags:
-        - led
-      responses:
-        "400":
-          description: Opération invalide
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Erreur"
-              examples:
-                DemandeIncomplete:
-                  value:
-                    code: 1
-                    message: "La demande est incomplète"
-                DemandeInvalide:
-                  value:
-                    code: 2
-                    message: "La demande est invalide"
-  /led:
-    post:
-      tags:
-        - led
-      summary: Ajouter une Led
-      description: Ajouter une nouvelle Led
-      operationId: addLed
-      requestBody:
-        description: Ajout d'une Led
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/NewLed"
-        required: true
-      responses:
-        "200":
-          description: Succès
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Led"
-        "400":
-          description: Opération invalide
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Erreur"
-              examples:
-                DemandeIncomplete:
-                  value:
-                    code: 1
-                    message: "La demande est incomplète"
-                DemandeInvalide:
-                  value:
-                    code: 2
-                    message: "La demande est invalide"
+...
+```
+
+La réponse à cette requête retourne un objet `getLeds` référencé dans la propriété `components` :
+
+```yaml
+...
 components:
   schemas:
     getLeds:
@@ -464,52 +324,31 @@ components:
             - 27
             - 32
             - 33
-    NewLed:
-      type: object
-      description: Une Led
-      required:
-        - couleur
-        - broche
-      properties:
-        couleur:
-          type: string
-          enum:
-            - rouge
-            - verte
-            - orange
-        broche:
-          type: integer
-          description: GPIO OUTPUT
-          format: int32
-          enum:
-            - 4
-            - 5
-            - 13
-            - 14
-            - 16
-            - 17
-            - 18
-            - 19
-            - 21
-            - 22
-            - 23
-            - 25
-            - 26
-            - 27
-            - 32
-            - 33
-    Erreur:
-      type: object
-      required:
-        - code
-        - message
-      properties:
-        code:
-          type: integer
-          format: int32
-        message:
-          type: string
+...
 ```
+
+On obtiendra une réponse en JSON de ce type :
+
+```json
+[
+    {
+        "idLed": 1,
+        "etat": false,
+        "couleur": "rouge",
+        "broche": 4
+    },
+    {
+        "idLed": 2,
+        "etat": false,
+        "couleur": "verte",
+        "broche": 16
+    }
+]
+```
+
+> La spécification complète : [specifications/openapi-v1.yaml](./specifications/openapi-v1.yaml)
+
+Avec l'[éditeur en ligne](http://editor.swagger.io/) : http://editor.swagger.io/.
 
 ![](./images/openapi-operations.png)
 
@@ -565,7 +404,11 @@ Il est possible de générer le code du serveur :
 
 ### ESP32
 
-cf. [src/serveur-esp32/](src/serveur-esp32/)
+L'exemple de base présenté ici tourne autour d'un [ESP32](https://fr.wikipedia.org/wiki/ESP32). L'API REST définie ci-dessus (cf. [specifications/openapi-v1.yaml](./specifications/openapi-v1.yaml)) va permettre de gérer des Leds rouges et vertes reliées sur les broches [GPIO](https://fr.wikipedia.org/wiki/General_Purpose_Input/Output).
+
+#### Code source
+
+> Code source complet : [src/serveur-esp32/](src/serveur-esp32/)
 
 On réalise le serveur web en héritant de la classe [WebServer](https://github.com/espressif/arduino-esp32/blob/master/libraries/WebServer/src/WebServer.h)  :
 
@@ -612,7 +455,7 @@ public:
 > [!IMPORTANT]
 > Les explications sur l'utilisation de `std::function` sont fournies dans ce [document](https://github.com/bts-lasalle-avignon-ressources/callback/).
 
-Les méthodes `on()` et `onNotFound()` vont permettre de définir les opérations de l'API REST.
+**Les méthodes `on()` (et `onNotFound()`) vont permettre de définir les opérations de l'API REST.**
 
 Elles attendent en paramètre la **fonction de rappel** qui sera déclenchée lors d'une requête HTTP et qui en assurera le traitement.
 
@@ -650,6 +493,7 @@ void ServeurWeb::traiterRequetes()
 void ServeurWeb::afficherAccueil()
 {
     String message = "<h1>Bienvenue ...</h1>\n";
+    // ...
     message += "<p>LaSalle Avignon v1.0</p>\n";
     send(200, F("text/html"), message);
 }
@@ -661,25 +505,105 @@ void ServeurWeb::traiterRequeteGetLeds()
 
 void ServeurWeb::traiterRequeteNonTrouvee()
 {
-    String message = "404 File Not Found\n\n";
-    message += "URI: ";
-    message += uri();
-    message += "\nMethod: ";
-    message += (method() == HTTP_GET) ? "GET" : "POST";
-    message += "\nArguments: ";
-    message += args();
-    message += "\n";
-    for(uint8_t i = 0; i < args(); i++)
-    {
-        message += " " + argName(i) + ": " + arg(i) + "\n";
-    }
+    String message = "404 File Not Found\r\n";
     send(404, "text/plain", message);
 }
 ```
 
-[ArduinoJson](https://arduinojson.org/)
+L'API REST est définie dans la méthode :
 
-> Voir aussi :[ArduinoJson Assistant](https://arduinojson.org/v6/assistant/)
+```cpp
+void ServeurWeb::installerGestionnairesRequetes()
+{
+    on("/", HTTP_GET, std::bind(&ServeurWeb::afficherAccueil, this));
+    on("/leds", HTTP_GET, std::bind(&ServeurWeb::traiterRequeteGetLeds, this));
+    on(UriRegex("/led/([1-" + String(NB_LEDS_MAX) + "]+)$"),
+       HTTP_GET,
+       std::bind(&ServeurWeb::traiterRequeteGetLed, this));
+    on(UriRegex("/led/([1-" + String(NB_LEDS_MAX) + "]+)$"),
+       HTTP_POST,
+       std::bind(&ServeurWeb::traiterRequeteUpdateLedWithForm, this));
+    on(UriRegex("/led/([1-" + String(NB_LEDS_MAX) + "]+)$"),
+       HTTP_PUT,
+       std::bind(&ServeurWeb::traiterRequeteUpdateLed, this));
+    on(UriRegex("/led/([1-" + String(NB_LEDS_MAX) + "]+)$"),
+       HTTP_DELETE,
+       std::bind(&ServeurWeb::traiterRequeteDeleteLed, this));
+    on("/led", HTTP_POST, std::bind(&ServeurWeb::traiterRequeteAddLed, this));
+    onNotFound(std::bind(&ServeurWeb::traiterRequeteNonTrouvee, this));
+}
+```
+
+La méthode `traiterRequeteGetLeds()` retourne une réponse en JSON de ce type :
+
+```json
+[
+    {
+        "idLed": 1,
+        "etat": false,
+        "couleur": "rouge",
+        "broche": 4
+    },
+    {
+        "idLed": 2,
+        "etat": false,
+        "couleur": "verte",
+        "broche": 16
+    }
+]
+```
+
+Pour manipuler les données en JSON, on utilise la classe [ArduinoJson](https://arduinojson.org/). Il existe un [assistant](https://arduinojson.org/v6/assistant/) pour aider à manipuler ce type de données.
+
+Pour les requêtes `/led/{idLed}`, on utilise une [expression régulière](https://fr.wikipedia.org/wiki/Expression_r%C3%A9guli%C3%A8re) sur l'URI avec la classe `UriRegex`. L'[expression régulière](https://fr.wikipedia.org/wiki/Expression_r%C3%A9guli%C3%A8re) `"/led/([1-8]+)$"` (on a défini `NB_LEDS_MAX` à `8`) permettra d'accepter seulement les requêtes pour des `idLed` compris entre un `1` et `8`. Les autres requêtes seront redigirées vers la méthode `traiterRequeteNonTrouvee()` qui retournera une erreur `404 Led non trouvée` comme cela a été définie dans l'API.
+
+Pour retourner les réponses, on utilise la méthode `send()` de la classe [WebServer](https://github.com/espressif/arduino-esp32/blob/master/libraries/WebServer/src/WebServer.h) :
+
+- une réponse `200` :
+
+```cpp
+documentJSON.clear();
+JsonObject objetLed  = documentJSON.createNestedObject();
+
+// exemple :
+objetJSON["idLed"]   = 1;
+objetJSON["etat"]    = false;
+objetJSON["couleur"] = "rouge";
+objetJSON["broche"]  = 4;
+
+char buffer[TAILLE_JSON];
+serializeJson(documentJSON, buffer);
+send(200, "application/json", buffer);
+```
+
+- une réponse `400` :
+
+```cpp
+send(400, "application/json", 
+          "{\"code\": 2,\"message\": \"La demande est invalide\"}");
+```
+
+La classe [WebServer](https://github.com/espressif/arduino-esp32/blob/master/libraries/WebServer/src/WebServer.h) fournit des méthodes pour traiter les requêtes reçues :
+
+- `uri()` : retourne l'URL de la requête
+- `method()` : retourne la commande spécifiant le type de requête (`HTTP_GET`, `HTTP_POST`, ...)
+- `arg()` : retourne un paramètre de la requête
+
+Par exemple, si la requête possède des données JSON dans `Body`, on pourra y accéder de la manière suivante :
+
+```cpp
+Serial.print(F("Body : "));
+Serial.println(arg("plain"));
+
+String body = arg("plain");
+DeserializationError erreur = deserializeJson(documentJSON, body);
+JsonObject objetJSON = documentJSON.as<JsonObject>();
+if(objetJSON.containsKey("idLed"))
+{
+    Serial.print(F("idLed : "));
+    Serial.println(documentJSON["idLed"].as<int>());
+}
+```
 
 #### Tests
 
