@@ -104,7 +104,7 @@ JsonObject Led::getObjetJSON() const
 
 void Led::setEtat(bool etat)
 {
-    // changement d'état
+    // changement d'état ?
     if(etat != this->etat)
     {
         this->etat = etat;
@@ -114,7 +114,11 @@ void Led::setEtat(bool etat)
 
 void Led::setNumeroBroche(int broche)
 {
-    this->broche = broche;
+    // changement de broche ?
+    if(broche != this->broche)
+    {
+        this->broche = broche;
+    }
 }
 
 void Led::setCouleur(String couleur)
@@ -217,6 +221,16 @@ void Led::setObjetJSON(JsonObject& objetJSON) const
     objetJSON["etat"]    = getEtat();
     objetJSON["couleur"] = getCouleur();
     objetJSON["broche"]  = getNumeroBroche();
+}
+
+bool Led::changementBroche(int broche) const
+{
+    // changement de broche ?
+    if(broche != this->broche)
+    {
+        return true;
+    }
+    return false;
 }
 
 String Led::getNomCouleur(CouleurLed couleur)

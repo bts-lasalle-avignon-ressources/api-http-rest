@@ -55,6 +55,7 @@ class Led
     void       setCouleur(CouleurLed couleur);
     void       commanderLed();
     void       setObjetJSON(JsonObject& objetJSON) const;
+    bool       changementBroche(int broche) const;
 
     static String getNomCouleur(CouleurLed couleur);
 };
