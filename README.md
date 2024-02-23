@@ -834,7 +834,171 @@ Et il existe une extension pour Visual Studio Code : https://marketplace.visuals
 
 Il est possible de créer un serveur HTTP API REST avec [Flask](https://pypi.org/project/Flask/) en [Python](https://www.python.org/).
 
-Tutoriel : https://pythonbasics.org/flask-rest-api/
+> Voir aussi [FastAPI](https://fastapi.tiangolo.com/)
+
+Liens :
+
+- [Installation](https://flask.palletsprojects.com/en/3.0.x/installation/#python-version)
+- [Quickstart](https://flask.palletsprojects.com/en/3.0.x/quickstart/)
+
+
+Si besoin :
+
+```bash
+$ sudo apt-get -y install python3-pip
+$ sudo pip3 install flask
+```
+
+Exemple basique :
+
+```python
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route("/")
+def hello_world():
+    return "<p>Hello, World!</p>"
+```
+
+Test :
+
+```bash
+$ flask --app app run
+ * Serving Flask app 'app'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+```
+
+On commence par définir l'API REST :
+
+```python
+#!/usr/bin/env python
+# encoding: utf-8
+from flask import Flask, request, abort, jsonify
+
+...
+
+@app.route('/leds', methods=['GET'])
+def getLeds():
+    ...
+
+@app.route('/led/<int(min=1,max=8):idLed>', methods=['GET'])
+def getLed(idLed):
+    ...
+
+@app.route('/led/<int(min=1,max=8):idLed>', methods=['PUT'])
+def upadateLed(idLed):
+    ...
+
+@app.route('/led/<int(min=1,max=8):idLed>', methods=['POST'])
+def updateLedWithForm(idLed):
+    ...
+
+@app.route('/led/<int(min=1,max=8):idLed>', methods=['DELETE'])
+def deleteLed(idLed):
+    ...
+
+@app.route('/led', methods=['POST'])
+def addLed():
+    ...
+
+@app.errorhandler(400)
+def traiterRequeteNonValide(error):
+    ...
+
+@app.errorhandler(404)
+def traiterRequeteNonTrouvee(error):
+    ...
+```
+
+Pour les besoins de l'exemple, on définit une classe `Led` :
+
+```python
+class Led(object):
+    def __init__(self, idLed: int=None, etat: bool=None, couleur: str=None, broche: int=None):
+        self._idLed = idLed
+        self._etat = etat
+        self._couleur = couleur
+        self._broche = broche
+...
+```
+
+Et on crée deux `Led` :
+
+```python
+#!/usr/bin/env python
+# encoding: utf-8
+from flask import Flask, request, abort, jsonify
+import led
+
+NB_LEDS_MAX = 8
+leds = {}
+leds[1] = led.Led(1, False, "rouge", 5)
+leds[2] = led.Led(2, False, "verte", 16)
+
+app = Flask(__name__)
+
+...
+```
+
+Par exemple l'implémentation du traitement de la requête `GET` sur `http://127.0.0.1:5000/leds` pour lister les Leds :
+
+```python
+@app.route('/leds', methods=['GET'])
+def getLeds():
+    ledsValides = (led for led in leds.values() if led != None)
+    return jsonify([led.serialize() for led in ledsValides])
+```
+
+donnera :
+
+```bash
+$ curl --location http://127.0.0.1:5000/leds
+[{"broche":5,"couleur":"rouge","etat":false,"idLed":1},{"broche":16,"couleur":"verte","etat":false,"idLed":2}]
+```
+
+Et la requête `GET` sur `http://127.0.0.1:5000/led/idLed` pour obtenir les informations sur une Led :
+
+```python
+@app.route('/led/<int(min=1,max=8):idLed>', methods=['GET'])
+def getLed(idLed):
+    if idLed in leds:
+        if leds[idLed] == None:
+            abort(404, description="Led non trouvée")
+        return jsonify(leds[idLed].serialize())
+    else:
+        abort(404, description="Led non trouvée")
+```
+
+donnera :
+
+```bash
+$ curl --location http://127.0.0.1:5000/led/1
+{"broche":5,"couleur":"rouge","etat":false,"idLed":1}
+
+$ curl --location http://127.0.0.1:5000/led/5
+Led non trouvée
+```
+
+> Code source complet : [src/serveur-python-flask/](src/serveur-python-flask/)
+
+Test :
+
+```bash
+$ cd src/serveur-python-flask
+$ pip3 install -r requirements.txt
+$ flask --app app run
+ * Serving Flask app 'app'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+```
+
+> [Deploying to Production](https://flask.palletsprojects.com/en/3.0.x/deploying/)
 
 ### Node.js
 
