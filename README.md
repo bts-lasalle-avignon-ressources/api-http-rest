@@ -26,7 +26,7 @@
       - [Serveur web](#serveur-web)
       - [Tests CLI avec `curl`](#tests-cli-avec-curl)
       - [Tests avec Postman](#tests-avec-postman)
-    - [Raspberry PI (Python)](#raspberry-pi-python)
+    - [Raspberry Pi (Python)](#raspberry-pi-python)
       - [Serveur Web](#serveur-web-1)
       - [GPIO](#gpio)
     - [Node.js](#nodejs)
@@ -832,7 +832,7 @@ Et il existe une extension pour Visual Studio Code : https://marketplace.visuals
 
 ![](./images/postman-getleds-esp32.png)
 
-### Raspberry PI (Python)
+### Raspberry Pi (Python)
 
 L'exemple de base présenté ici tourne autour d'un [Raspberry Pi](https://fr.wikipedia.org/wiki/Raspberry_Pi). L'API REST définie ci-dessus (cf. [specifications/openapi-v1.yaml](./specifications/openapi-v1.yaml)) va permettre de gérer des Leds rouges et vertes reliées sur les broches [GPIO](https://fr.wikipedia.org/wiki/General_Purpose_Input/Output).
 
