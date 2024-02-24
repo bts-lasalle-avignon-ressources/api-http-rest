@@ -4,17 +4,16 @@
 
 from flask import Flask, request, abort, jsonify, Response
 import led
-#import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 
 NB_LEDS_MAX = 8
 leds = {}
 leds[1] = led.Led(1, False, "rouge", 5)
-leds[2] = led.Led(2, False, "verte", 16)
+leds[2] = led.Led(2, False, "verte", 17)
 
-#GPIO.setmode(GPIO.BCM)
-#GPIO.setup(leds[1].broche, GPIO.OUT)
-#GPIO.setup(leds[2].broche, GPIO.OUT)
-#GPIO.setup(17, GPIO.OUT)
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(leds[1].broche, GPIO.OUT)
+GPIO.setup(leds[2].broche, GPIO.OUT)
 
 app = Flask(__name__)
 

@@ -1,6 +1,8 @@
 # coding: utf-8
 # Thierry Vaira
 
+import RPi.GPIO as GPIO
+
 class Led(object):
     def __init__(self, idLed: int=None, etat: bool=None, couleur: str=None, broche: int=None):
         self._idLed = idLed
@@ -28,11 +30,10 @@ class Led(object):
         return False
 
     def commander(self):
-        #if self._etat:
-        #    GPIO.output(LED_PIN, GPIO.HIGH)
-        #else:
-        #    GPIO.output(LED_PIN, GPIO.LOW)
-        pass
+        if self._etat:
+            GPIO.output(self._broche, GPIO.HIGH)
+        else:
+            GPIO.output(self._broche, GPIO.LOW)
 
     @property
     def idLed(self) -> int:

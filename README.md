@@ -22,16 +22,18 @@
     - [SwaggerHub](#swaggerhub-1)
     - [Swagger Codegen](#swagger-codegen)
   - [Application serveur HTTP](#application-serveur-http)
-    - [ESP32](#esp32)
+    - [ESP32 (C++)](#esp32-c)
       - [Serveur web](#serveur-web)
       - [Tests CLI avec `curl`](#tests-cli-avec-curl)
       - [Tests avec Postman](#tests-avec-postman)
-    - [Python](#python)
+    - [Raspberry PI (Python)](#raspberry-pi-python)
+      - [Serveur Web](#serveur-web-1)
+      - [GPIO](#gpio)
     - [Node.js](#nodejs)
   - [Application cliente HTTP](#application-cliente-http)
     - [Android Java](#android-java)
     - [Qt C++](#qt-c)
-    - [Python](#python-1)
+    - [Python](#python)
   - [Auteurs](#auteurs)
 
 ---
@@ -501,7 +503,7 @@ $ java -jar modules/swagger-codegen-cli/target/swagger-codegen-cli.jar generate 
 
 ## Application serveur HTTP
 
-### ESP32
+### ESP32 (C++)
 
 L'exemple de base présenté ici tourne autour d'un [ESP32](https://fr.wikipedia.org/wiki/ESP32). L'API REST définie ci-dessus (cf. [specifications/openapi-v1.yaml](./specifications/openapi-v1.yaml)) va permettre de gérer des Leds rouges et vertes reliées sur les broches [GPIO](https://fr.wikipedia.org/wiki/General_Purpose_Input/Output).
 
@@ -830,7 +832,11 @@ Et il existe une extension pour Visual Studio Code : https://marketplace.visuals
 
 ![](./images/postman-getleds-esp32.png)
 
-### Python
+### Raspberry PI (Python)
+
+L'exemple de base présenté ici tourne autour d'un [Raspberry Pi](https://fr.wikipedia.org/wiki/Raspberry_Pi). L'API REST définie ci-dessus (cf. [specifications/openapi-v1.yaml](./specifications/openapi-v1.yaml)) va permettre de gérer des Leds rouges et vertes reliées sur les broches [GPIO](https://fr.wikipedia.org/wiki/General_Purpose_Input/Output).
+
+#### Serveur Web
 
 Il est possible de créer un serveur HTTP API REST avec [Flask](https://pypi.org/project/Flask/) en [Python](https://www.python.org/).
 
@@ -999,6 +1005,215 @@ Press CTRL+C to quit
 ```
 
 > [Deploying to Production](https://flask.palletsprojects.com/en/3.0.x/deploying/)
+
+#### GPIO
+
+[GPIO](https://fr.wikipedia.org/wiki/General_Purpose_Input/Output) (_General Purpose Input/Output_) est un port d’entrées-sorties très
+utilisés dans le monde des microcontrôleurs et de l’électronique embarquée.
+
+Les GPIO sont gérés par les pilotes du noyau du système d’exploitation. Il n’y a pas d’entrée/sortie analogique.
+
+Linux reconnaît nativement les ports GPIO, une documentation complète est même disponible (www.kernel.org/doc/Documentation/gpio/gpio.txt).
+
+Accès système :
+
+- Les ports GPIO étaient accessibles depuis leur export dans `/sys/class/gpio/` via `sysfs` (obsolète)
+- Depuis la version 4.8 du noyau Linux, les GPIO sont accesibles par le pilote de périphérique ABI (_Application Binary Interface_) _chardev GPIO_ via `/dev/gpiochipN` ou `/sys/bus/gpio`
+
+Lien : https://www.raspberrypi.com/documentation/computers/raspberry-pi.html
+
+La liste des GPIO est accessible avec la commande `pinout`.
+
+![](https://www.raspberrypi.com/documentation/computers/images/GPIO-Pinout-Diagram-2.png)
+
+- Une sortie peut être fixée sur un niveau haut (3V3) ou bas (0V).
+- Une entrée peut être lue comme un niveau haut (3V3) ou bas (0V).
+
+> [!TIP]
+> Il est possible d’utiliser de résistances internes _pull-up_ ou _pull-down_. Les GPIO2 et GPIO3 ont des résistances de _pull-up_ fixes, mais pour les autres broches, elles peuvent être configurées logiciellement. _Software PWM_ (_Pulse-Width Modulation_) disponible sur toutes les broches et _Hardware PWM_ seulement sur GPIO12, GPIO13, GPIO18, GPIO19.
+> I2C : SDA (GPIO2) SCL (GPIO3) et EEPROM Data (GPIO0) EEPROM Clock (GPIO1)
+> Port série (UART) : TX (GPIO14) RX (GPIO15)
+> SPI :
+> - SPI0 : MOSI (GPIO10) MISO (GPIO9) SCLK (GPIO11) CE0 (GPIO8) CE1 (GPIO7)
+> - SPI1 : MOSI (GPIO20) MISO (GPIO19) SCLK (GPIO21) CE0 (GPIO18) CE1 (GPIO17) CE2 (GPIO16)
+
+Test avec [WiringPi](https://github.com/WiringPi/WiringPi/releases/tag/2.61-1) :
+
+- Pour un système 32 bits :
+
+```bash
+$ wget https://github.com/WiringPi/WiringPi/releases/download/2.61-1/wiringpi-2.61-1-armhf.deb
+$ sudo apt install ./wiringpi-2.61-1-armhf.deb
+```
+
+- Pour un système 64 bits :
+
+```bash
+$ wget https://github.com/WiringPi/WiringPi/releases/download/2.61-1/wiringpi-2.61-1-arm64.deb
+$ sudo apt install ./wiringpi-2.61-1-arm64.deb
+```
+
+Configuration d'une sortie :
+
+```bash
+$ gpio -g mode 17 out
+```
+
+![](./images/gpio17.png)
+
+Fixe la sortie à l'état bas :
+
+```bash
+$ gpio -g write 17 0
+
+$ gpio readall
+ +-----+-----+---------+------+---+---Pi 3B--+---+------+---------+-----+-----+
+ | BCM | wPi |   Name  | Mode | V | Physical | V | Mode | Name    | wPi | BCM |
+ +-----+-----+---------+------+---+----++----+---+------+---------+-----+-----+
+ |     |     |    3.3v |      |   |  1 || 2  |   |      | 5v      |     |     |
+ |   2 |   8 |   SDA.1 |   IN | 1 |  3 || 4  |   |      | 5v      |     |     |
+ |   3 |   9 |   SCL.1 |   IN | 1 |  5 || 6  |   |      | 0v      |     |     |
+ |   4 |   7 | GPIO. 7 |   IN | 1 |  7 || 8  | 0 | IN   | TxD     | 15  | 14  |
+ |     |     |      0v |      |   |  9 || 10 | 1 | IN   | RxD     | 16  | 15  |
+ |  17 |   0 | GPIO. 0 |  OUT | 0 | 11 || 12 | 0 | IN   | GPIO. 1 | 1   | 18  |
+ |  27 |   2 | GPIO. 2 |   IN | 0 | 13 || 14 |   |      | 0v      |     |     |
+ |  22 |   3 | GPIO. 3 |   IN | 0 | 15 || 16 | 0 | IN   | GPIO. 4 | 4   | 23  |
+ |     |     |    3.3v |      |   | 17 || 18 | 0 | IN   | GPIO. 5 | 5   | 24  |
+ |  10 |  12 |    MOSI |   IN | 0 | 19 || 20 |   |      | 0v      |     |     |
+ |   9 |  13 |    MISO |   IN | 0 | 21 || 22 | 0 | IN   | GPIO. 6 | 6   | 25  |
+ |  11 |  14 |    SCLK |   IN | 0 | 23 || 24 | 1 | IN   | CE0     | 10  | 8   |
+ |     |     |      0v |      |   | 25 || 26 | 1 | IN   | CE1     | 11  | 7   |
+ |   0 |  30 |   SDA.0 |   IN | 1 | 27 || 28 | 1 | IN   | SCL.0   | 31  | 1   |
+ |   5 |  21 | GPIO.21 |   IN | 1 | 29 || 30 |   |      | 0v      |     |     |
+ |   6 |  22 | GPIO.22 |   IN | 1 | 31 || 32 | 0 | IN   | GPIO.26 | 26  | 12  |
+ |  13 |  23 | GPIO.23 |   IN | 0 | 33 || 34 |   |      | 0v      |     |     |
+ |  19 |  24 | GPIO.24 |   IN | 0 | 35 || 36 | 0 | IN   | GPIO.27 | 27  | 16  |
+ |  26 |  25 | GPIO.25 |   IN | 0 | 37 || 38 | 0 | IN   | GPIO.28 | 28  | 20  |
+ |     |     |      0v |      |   | 39 || 40 | 0 | IN   | GPIO.29 | 29  | 21  |
+ +-----+-----+---------+------+---+----++----+---+------+---------+-----+-----+
+ | BCM | wPi |   Name  | Mode | V | Physical | V | Mode | Name    | wPi | BCM |
+ +-----+-----+---------+------+---+---Pi 3B--+---+------+---------+-----+-----+
+```
+
+Fixe la sortie à l'état haut :
+
+```bash
+$ gpio -g write 17 1
+
+$ gpio readall
+ +-----+-----+---------+------+---+---Pi 3B--+---+------+---------+-----+-----+
+ | BCM | wPi |   Name  | Mode | V | Physical | V | Mode | Name    | wPi | BCM |
+ +-----+-----+---------+------+---+----++----+---+------+---------+-----+-----+
+ |     |     |    3.3v |      |   |  1 || 2  |   |      | 5v      |     |     |
+ |   2 |   8 |   SDA.1 |   IN | 1 |  3 || 4  |   |      | 5v      |     |     |
+ |   3 |   9 |   SCL.1 |   IN | 1 |  5 || 6  |   |      | 0v      |     |     |
+ |   4 |   7 | GPIO. 7 |   IN | 1 |  7 || 8  | 0 | IN   | TxD     | 15  | 14  |
+ |     |     |      0v |      |   |  9 || 10 | 1 | IN   | RxD     | 16  | 15  |
+ |  17 |   0 | GPIO. 0 |  OUT | 1 | 11 || 12 | 0 | IN   | GPIO. 1 | 1   | 18  |
+ |  27 |   2 | GPIO. 2 |   IN | 0 | 13 || 14 |   |      | 0v      |     |     |
+ |  22 |   3 | GPIO. 3 |   IN | 0 | 15 || 16 | 0 | IN   | GPIO. 4 | 4   | 23  |
+ |     |     |    3.3v |      |   | 17 || 18 | 0 | IN   | GPIO. 5 | 5   | 24  |
+ |  10 |  12 |    MOSI |   IN | 0 | 19 || 20 |   |      | 0v      |     |     |
+ |   9 |  13 |    MISO |   IN | 0 | 21 || 22 | 0 | IN   | GPIO. 6 | 6   | 25  |
+ |  11 |  14 |    SCLK |   IN | 0 | 23 || 24 | 1 | IN   | CE0     | 10  | 8   |
+ |     |     |      0v |      |   | 25 || 26 | 1 | IN   | CE1     | 11  | 7   |
+ |   0 |  30 |   SDA.0 |   IN | 1 | 27 || 28 | 1 | IN   | SCL.0   | 31  | 1   |
+ |   5 |  21 | GPIO.21 |   IN | 1 | 29 || 30 |   |      | 0v      |     |     |
+ |   6 |  22 | GPIO.22 |   IN | 1 | 31 || 32 | 0 | IN   | GPIO.26 | 26  | 12  |
+ |  13 |  23 | GPIO.23 |   IN | 0 | 33 || 34 |   |      | 0v      |     |     |
+ |  19 |  24 | GPIO.24 |   IN | 0 | 35 || 36 | 0 | IN   | GPIO.27 | 27  | 16  |
+ |  26 |  25 | GPIO.25 |   IN | 0 | 37 || 38 | 0 | IN   | GPIO.28 | 28  | 20  |
+ |     |     |      0v |      |   | 39 || 40 | 0 | IN   | GPIO.29 | 29  | 21  |
+ +-----+-----+---------+------+---+----++----+---+------+---------+-----+-----+
+ | BCM | wPi |   Name  | Mode | V | Physical | V | Mode | Name    | wPi | BCM |
+ +-----+-----+---------+------+---+---Pi 3B--+---+------+---------+-----+-----+
+```
+
+Lien : [Gestion des ports GPIO en Python](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#gpio-in-python)
+
+Pour gérer les ports GPIO, on peut utiliser [RPi.GPIO](https://pypi.org/project/RPi.GPIO/) ou [gpiozero](https://gpiozero.readthedocs.io/en/latest/).
+
+On l'intégre à l'application :
+
+```python
+#!/usr/bin/env python
+# encoding: utf-8
+
+from flask import Flask, request, abort, jsonify, Response
+import led
+import RPi.GPIO as GPIO
+
+NB_LEDS_MAX = 8
+leds = {}
+leds[1] = led.Led(1, False, "rouge", 5)
+leds[2] = led.Led(2, False, "verte", 17)
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(leds[1].broche, GPIO.OUT)
+GPIO.setup(leds[2].broche, GPIO.OUT)
+
+app = Flask(__name__)
+...
+```
+
+On va ajouter une méthode pour commander la Led dans la classe `Led` :
+
+```python
+# coding: utf-8
+
+import RPi.GPIO as GPIO
+
+class Led(object):
+    def __init__(self, idLed: int=None, etat: bool=None, couleur: str=None, broche: int=None):
+        self._idLed = idLed
+        self._etat = etat
+        self._couleur = couleur
+        self._broche = broche
+
+    def commander(self):
+        if self._etat:
+            GPIO.output(self._broche, GPIO.HIGH)
+        else:
+            GPIO.output(self._broche, GPIO.LOW)
+
+...
+
+    @etat.setter
+    def etat(self, etat: bool):
+        if etat is None:
+            raise ValueError("Valeur invalide pour etat")
+        if etat != self._etat:
+            self._etat = etat
+            self.commander()
+```
+
+> C'est un changement d'état (cf. _setter_) qui provoque une commande du GPIO associé à la Led.
+
+Démarrage du serveur en [développement](https://flask.palletsprojects.com/en/3.0.x/cli/#run-the-development-server) :
+
+```bash
+flask --app app run -h 0.0.0.0 -p 5000
+/home/pi/serveur-python-flask/app.py:16: RuntimeWarning: This channel is already in use, continuing anyway.  Use GPIO.setwarnings(False) to disable warnings.
+  GPIO.setup(leds[2].broche, GPIO.OUT)
+ * Serving Flask app 'app'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.1.24:5000
+Press CTRL+C to quit
+```
+
+Test avec la Led "verte" sur le GPIO 17 (broche 11) :
+
+```bash
+curl -H 'Content-Type: application/json' -X POST -d '{"broche":17,"couleur":"verte","etat":true,"idLed":2}' http://192.168.1.24:5000/led/2
+curl -H 'Content-Type: application/json' -X POST -d '{"broche":17,"couleur":"verte","etat":false,"idLed":2}' http://192.168.1.24:5000/led/2
+```
+
+![](./images/test-led-verte-rpi.png)
+
+> Code source complet : [src/serveur-python-flask/](src/serveur-python-flask/)
 
 ### Node.js
 
